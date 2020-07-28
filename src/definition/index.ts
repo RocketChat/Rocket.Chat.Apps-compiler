@@ -7,5 +7,5 @@ export {
     IAppsCompiler,
     ICompilerError,
     ICompilerFile,
-    ICompilerResult
-}
+    ICompilerResult,
+};
