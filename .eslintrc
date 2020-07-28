@@ -15,8 +15,7 @@
             "node": {
                 "extensions": [
                     ".js",
-                    ".ts",
-                    ".tsx"
+                    ".ts"
                 ]
             }
         }
@@ -50,7 +49,8 @@
             ],
             "rules": {
                 "@typescript-eslint/ban-ts-ignore": "off",
-                "@typescript-eslint/no-explicit-any": "off"
+                "@typescript-eslint/no-explicit-any": "off",
+                "indent": ["error", 4]
             },
             "env": {
                 "commonjs": true,
