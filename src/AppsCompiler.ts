@@ -225,6 +225,11 @@ class AppsCompiler implements IAppsCompiler {
         // Keep compatibility with apps importing apps-ts-definition
         moduleName = moduleName.replace(/@rocket.chat\/apps-ts-definition\//, '@rocket.chat/apps-engine/definition/');
 
+        // ignore @types/node/*.d.ts
+        if (/node_modules\/@types\/node\/\S+\.d\.ts$/.test(containingFile)) {
+            return resolvedModules.push(undefined);
+        }
+
         if (Utilities.allowedInternalModuleRequire(moduleName)) {
             return resolvedModules.push({ resolvedFileName: `${ moduleName }.js` });
         }
