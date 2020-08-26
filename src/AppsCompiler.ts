@@ -9,16 +9,16 @@ import {
     ICompilerError,
     ICompilerFile,
     ICompilerResult,
+    IMapCompilerFile,
 } from './definition';
 import { Utilities } from './misc/Utilities';
 
 class AppsCompiler implements IAppsCompiler {
     private readonly compilerOptions: fallbackTypescript.CompilerOptions;
 
-    private libraryFiles: { [s: string]: ICompilerFile };
+    private libraryFiles: IMapCompilerFile;
 
     constructor() {
-        // console.log(fallbackTypescript.version);
         this.compilerOptions = {
             target: fallbackTypescript.ScriptTarget.ES2017,
             module: fallbackTypescript.ModuleKind.CommonJS,
@@ -30,17 +30,16 @@ class AppsCompiler implements IAppsCompiler {
             noImplicitReturns: true,
             emitDecoratorMetadata: true,
             experimentalDecorators: true,
-            types: ['node'],
+            // types: ['node'],
             // Set this to true if you would like to see the module resolution process
             traceResolution: false,
         };
         this.libraryFiles = {};
     }
 
-    public toJs({ classFile, files }: IAppSource): any {
-        // @TODO implement the other checks
-        if (!files) {
-            throw new Error('Invalid App package.');
+    public toJs({ appInfo, files }: IAppSource): any {
+        if (!appInfo.classFile || !files[appInfo.classFile] || !this.isValidFile(files[appInfo.classFile])) {
+            throw new Error(`Invalid App package. Could not find the classFile (${ appInfo.classFile }) file.`);
         }
 
         const result: ICompilerResult = {
@@ -53,13 +52,12 @@ class AppsCompiler implements IAppsCompiler {
         // and that the files are valid
         Object.keys(result.files).forEach((key) => {
             if (!this.isValidFile(result.files[key])) {
-                throw new Error(`Erro cabuloso ${ result.files[key] } in the file "${ key }".`);
+                throw new Error(`Invalid TypeScript file: "${ key }".`);
             }
 
             result.files[key].name = path.normalize(result.files[key].name);
         });
 
-        // const cwd = process.cwd();
         const cwd = __dirname.includes('node_modules/@rocket.chat/apps-engine')
             ? __dirname.split('node_modules/@rocket.chat/apps-engine')[0] : process.cwd();
 
@@ -107,7 +105,6 @@ class AppsCompiler implements IAppsCompiler {
         const languageService = fallbackTypescript.createLanguageService(host, fallbackTypescript.createDocumentRegistry());
 
         const coDiag = languageService.getCompilerOptionsDiagnostics();
-        console.log('hehe');
         if (coDiag.length !== 0) {
             console.log(coDiag);
 
@@ -118,8 +115,7 @@ class AppsCompiler implements IAppsCompiler {
             throw new Error(`Language Service's Compiler Options Diagnostics contains ${ coDiag.length } diagnostics.`);
         }
 
-
-        const src = languageService.getProgram().getSourceFile(classFile);
+        const src = languageService.getProgram().getSourceFile(appInfo.classFile);
 
         fallbackTypescript.forEachChild(src, (n) => {
             if (n.kind === fallbackTypescript.SyntaxKind.ClassDeclaration) {
@@ -128,14 +124,13 @@ class AppsCompiler implements IAppsCompiler {
                         const e = node as fallbackTypescript.HeritageClause;
                         fallbackTypescript.forEachChild(node, (nn) => {
                             if (e.token === fallbackTypescript.SyntaxKind.ExtendsKeyword) {
-                                if (nn.getText() !== 'App') { // aaaaaaaaAaaaaAAaAaAaAAa
-                                    throw new Error('whaat: must implement the App class');
+                                if (nn.getText() !== 'App') {
+                                    throw new Error('App must extend the "App" abstract class.');
                                 }
                             } else if (e.token === fallbackTypescript.SyntaxKind.ImplementsKeyword) {
-                                console.log('do i even get here?');
                                 result.implemented.push(nn.getText());
                             } else {
-                                // console.log(e.token, nn.getText());
+                                console.log(e.token, nn.getText());
                             }
                         });
                     }
@@ -153,9 +148,9 @@ class AppsCompiler implements IAppsCompiler {
 
                 if (diagnostic.file) {
                     const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
-                    console.log(`  Error ${diagnostic.file.fileName} (${line + 1},${character + 1}): ${message}`);
+                    console.log(`Error ${ diagnostic.file.fileName } (${ line + 1 },${ character + 1 }): ${ message }`);
                 } else {
-                    console.log(`  Error: ${message}`);
+                    console.log(`Error: ${ message }`);
                 }
             });
         }
@@ -180,7 +175,7 @@ class AppsCompiler implements IAppsCompiler {
                 file: dia.file.fileName,
                 line,
                 character,
-                message: `${dia.file.fileName} (${line + 1},${character + 1}): ${msg}`,
+                message: `${ dia.file.fileName } (${ line + 1 },${ character + 1 }): ${ msg }`,
             });
         });
 
@@ -196,7 +191,7 @@ class AppsCompiler implements IAppsCompiler {
             file.compiled = output.outputFiles[0].text;
         });
 
-        return files as any;
+        return result;
     }
 
     public resolvePath(

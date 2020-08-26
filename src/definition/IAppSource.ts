@@ -1,6 +1,7 @@
 import { ICompilerFile } from './ICompilerFile';
+import { IAppInfo } from './IAppInfo';
 
 export interface IAppSource {
-    classFile: string;
+    appInfo: IAppInfo;
     files: { [filename: string]: ICompilerFile };
 }

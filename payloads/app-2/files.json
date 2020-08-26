@@ -6,7 +6,7 @@
   },
   "index.ts": {
     "name":"index.ts",
-    "content":"import Notebook from './Notebook';\nimport { INote } from './definitions/INote';\n\n(() => {\n  const myNotebook = new Notebook();\n\n  const note: INote = {\n    author: 'the soviets',\n    date: '1969-07-03T23:18:00',\n    data: 'OOPSIE WOOPSIE!! Uwu We made a fucky wucky!! A wittle fucko boingo!',\n  };\n\n  myNotebook.addNote(note);\n  console.log(myNotebook.getAllNotes());\n  console.log(myNotebook.getCoverNote());\n})();\n",
+    "content":"import Notebook from './Notebook';\nimport { INote } from './definitions/INote';\n import * as fs from 'fs'; import * as events from 'events'; import * as stream from 'stream'; import * as net from 'net'; console.log(fs,events,stream,net);\n(() => {\n  const myNotebook = new Notebook();\n\n  const note: INote = {\n    author: 'the soviets',\n    date: '1969-07-03T23:18:00',\n    data: 'OOPSIE WOOPSIE!! Uwu We made a fucky wucky!! A wittle fucko boingo!',\n  };\n\n  myNotebook.addNote(note);\n  console.log(myNotebook.getAllNotes());\n  console.log(myNotebook.getCoverNote());\n})();\n",
     "version":0
   },
   "definitions/INotebook.ts": {

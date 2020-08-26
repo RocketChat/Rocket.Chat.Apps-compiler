@@ -9,6 +9,10 @@ enum AllowedInternalModules {
     url,
     crypto,
     buffer,
+    fs,
+    events,
+    stream,
+    net,
 }
 
 export class Utilities {
