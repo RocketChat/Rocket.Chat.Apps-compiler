@@ -5,5 +5,5 @@ export interface IAppsCompiler {
     /**
      * Compile an Rocket.Chat app into Javascript.
      */
-    toJs({ classFile, files }: IAppSource): ICompilerResult;
+    toJs({ appInfo, files }: IAppSource): ICompilerResult;
 }
