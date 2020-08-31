@@ -55,7 +55,8 @@
                 "no-empty-function": "off",
                 "import/order": ["error", {
                     "groups": [["builtin", "external"], "internal"]
-                }]
+                }],
+                "no-return-assign": "off"
             },
             "env": {
                 "commonjs": true,
