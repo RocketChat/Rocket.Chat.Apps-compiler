@@ -40,7 +40,7 @@ export class AppsCompiler implements IAppsCompiler {
         const { files, implemented, compilerErrors } = this.toJs(source);
 
         this.compiled = Object.entries(files)
-            .map(([filename, { compiled }]) => ({ [filename]: compiled }))
+            .map(([, { name, compiled }]) => ({ [name]: compiled }))
             .reduce((acc, cur) => Object.assign(acc, cur), {});
         this.implemented = implemented;
 
