@@ -13,7 +13,7 @@ import {
 } from './definition';
 import { Utilities } from './misc/Utilities';
 
-class AppsCompiler implements IAppsCompiler {
+export class AppsCompiler implements IAppsCompiler {
     private readonly compilerOptions: fallbackTypescript.CompilerOptions;
 
     private libraryFiles: IMapCompilerFile;
