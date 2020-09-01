@@ -1,20 +1,14 @@
-import { resolve, join, normalize } from 'path';
-import { promisify } from 'util';
 import { readdir, readFile } from 'fs';
+import { normalize, resolve } from 'path';
+import { promisify } from 'util';
+import { IAppSource } from '../definition';
 
-import { IAppInfo } from '../src/definition/IAppInfo';
-import { ICompilerFile } from '../src/definition/ICompilerFile';
-import { IMapCompilerFile } from '../src/definition/IMapCompilerFile';
-import AppsCompiler from '../src/AppsCompiler';
+import { IAppInfo } from '../definition/IAppInfo';
+import { ICompilerFile } from '../definition/ICompilerFile';
+import { IMapCompilerFile } from '../definition/IMapCompilerFile';
 
 const readdirPromise = promisify(readdir);
 const readfilePromise = promisify(readFile);
-
-function getPath() {
-    const dir = process.argv[2];
-    const resolved = normalize(join(__dirname, dir));
-    return resolved;
-}
 
 async function walkDirectory(directory: string): Promise<ICompilerFile[]> {
     const dirents = await readdirPromise(directory, { withFileTypes: true });
@@ -85,21 +79,12 @@ function getTypescriptFilesFromProject(projectFiles: ICompilerFile[]): ICompiler
     return projectFiles.filter((file: ICompilerFile) => file.name.endsWith('.ts'));
 }
 
-(async () => {
-    const projectDirectory = getPath();
-
-    const directoryWalkData: ICompilerFile[] = await walkDirectory(projectDirectory);
-    const projectFiles: ICompilerFile[] = filterProjectFiles(projectDirectory, directoryWalkData);
+export async function getAppSource(path: string): Promise<IAppSource> {
+    const directoryWalkData: ICompilerFile[] = await walkDirectory(path);
+    const projectFiles: ICompilerFile[] = filterProjectFiles(path, directoryWalkData);
     const tsFiles: ICompilerFile[] = getTypescriptFilesFromProject(projectFiles);
     const appInfo: IAppInfo = getAppInfo(projectFiles);
     const files: IMapCompilerFile = makeICompilerFileMap(tsFiles);
-    debugger;
-    const compiler = new AppsCompiler();
-    // @ts-ignore
-    const js = compiler.toJs({
-        files,
-        appInfo,
-    });
 
-    debugger;
-})();
+    return { appInfo, files };
+}
