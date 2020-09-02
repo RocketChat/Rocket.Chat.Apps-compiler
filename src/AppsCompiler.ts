@@ -1,22 +1,20 @@
-import * as path from 'path';
 import * as fs from 'fs';
-
+import * as path from 'path';
 import * as fallbackTypescript from 'typescript';
 
-import {
-    IAppSource,
-    IAppsCompiler,
-    ICompilerError,
-    ICompilerFile,
-    ICompilerResult,
-    IMapCompilerFile,
-} from './definition';
+import { IFiles } from './definition/IFiles';
+import { getAppSource } from './compiler/getAppSouce';
+import { IAppsCompiler, IAppSource, ICompilerError, ICompilerFile, ICompilerResult, IMapCompilerFile } from './definition';
 import { Utilities } from './misc/Utilities';
 
-class AppsCompiler implements IAppsCompiler {
+export class AppsCompiler implements IAppsCompiler {
     private readonly compilerOptions: fallbackTypescript.CompilerOptions;
 
     private libraryFiles: IMapCompilerFile;
+
+    private compiled: IFiles;
+
+    private implemented: string[];
 
     constructor() {
         this.compilerOptions = {
@@ -37,16 +35,36 @@ class AppsCompiler implements IAppsCompiler {
         this.libraryFiles = {};
     }
 
-    public toJs({ appInfo, files }: IAppSource): any {
+    public async compile(path: string): Promise<ICompilerError[]> {
+        const source = await getAppSource(path);
+        const { files, implemented, compilerErrors } = this.toJs(source);
+
+        this.compiled = Object.entries(files)
+            .map(([, { name, compiled }]) => ({ [name]: compiled }))
+            .reduce((acc, cur) => Object.assign(acc, cur), {});
+        this.implemented = implemented;
+
+        return compilerErrors;
+    }
+
+    public output(): IFiles {
+        return this.compiled;
+    }
+
+    public getImplemented(): string[] {
+        return this.implemented;
+    }
+
+    public async outputZip(outputPath: string): Promise<Buffer> {
+        return Buffer.from(outputPath);
+    }
+
+    private toJs({ appInfo, files }: IAppSource): ICompilerResult {
         if (!appInfo.classFile || !files[appInfo.classFile] || !this.isValidFile(files[appInfo.classFile])) {
             throw new Error(`Invalid App package. Could not find the classFile (${ appInfo.classFile }) file.`);
         }
 
-        const result: ICompilerResult = {
-            files,
-            implemented: [] as string[],
-            compilerErrors: [] as ICompilerError[],
-        };
+        const result: ICompilerResult = { files, implemented: [], compilerErrors: [] };
 
         // Verify all file names are normalized
         // and that the files are valid
@@ -194,11 +212,7 @@ class AppsCompiler implements IAppsCompiler {
         return result;
     }
 
-    public resolvePath(
-        containingFile: string,
-        moduleName: string,
-        cwd: string,
-    ): string {
+    public resolvePath(containingFile: string, moduleName: string, cwd: string): string {
         const currentFolderPath = path.dirname(containingFile).replace(cwd.replace(/\/$/, ''), '');
         const modulePath = path.join(currentFolderPath, moduleName);
 
