@@ -2,9 +2,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as fallbackTypescript from 'typescript';
 
-import { IFiles } from './definition/IFiles';
 import { getAppSource } from './compiler/getAppSouce';
-import { IAppsCompiler, IAppSource, ICompilerError, ICompilerFile, ICompilerResult, IMapCompilerFile } from './definition';
+import { IAppsCompiler, IAppSource, ICompilerFile, ICompilerResult, IMapCompilerFile } from './definition';
+import { IFiles } from './definition/IFiles';
 import { Utilities } from './misc/Utilities';
 
 export class AppsCompiler implements IAppsCompiler {
@@ -28,23 +28,23 @@ export class AppsCompiler implements IAppsCompiler {
             noImplicitReturns: true,
             emitDecoratorMetadata: true,
             experimentalDecorators: true,
-            // types: ['node'],
+            types: ['node'],
             // Set this to true if you would like to see the module resolution process
             traceResolution: false,
         };
         this.libraryFiles = {};
     }
 
-    public async compile(path: string): Promise<ICompilerError[]> {
+    public async compile(path: string): Promise<fallbackTypescript.Diagnostic[]> {
         const source = await getAppSource(path);
-        const { files, implemented, compilerErrors } = this.toJs(source);
+        const { files, implemented, diagnostics } = this.toJs(source);
 
         this.compiled = Object.entries(files)
             .map(([, { name, compiled }]) => ({ [name]: compiled }))
             .reduce((acc, cur) => Object.assign(acc, cur), {});
         this.implemented = implemented;
 
-        return compilerErrors;
+        return diagnostics;
     }
 
     public output(): IFiles {
@@ -64,7 +64,7 @@ export class AppsCompiler implements IAppsCompiler {
             throw new Error(`Invalid App package. Could not find the classFile (${ appInfo.classFile }) file.`);
         }
 
-        const result: ICompilerResult = { files, implemented: [], compilerErrors: [] };
+        const result: ICompilerResult = { files, implemented: [], diagnostics: [] };
 
         // Verify all file names are normalized
         // and that the files are valid
@@ -173,29 +173,7 @@ export class AppsCompiler implements IAppsCompiler {
             });
         }
 
-        const preEmit = fallbackTypescript.getPreEmitDiagnostics(languageService.getProgram());
-        preEmit.forEach((dia: fallbackTypescript.Diagnostic) => {
-            // Only filter out the typing diagnostics which are something other than errors
-            if (dia.category !== fallbackTypescript.DiagnosticCategory.Error) {
-                return;
-            }
-
-            const msg = fallbackTypescript.flattenDiagnosticMessageText(dia.messageText, '\n');
-            if (!dia.file) {
-                console.warn(msg);
-                return;
-            }
-
-            const { line, character } = dia.file.getLineAndCharacterOfPosition(dia.start);
-            // console.warn(`  Error ${dia.file.fileName} (${line + 1},${character + 1}): ${msg}`);
-
-            result.compilerErrors.push({
-                file: dia.file.fileName,
-                line,
-                character,
-                message: `${ dia.file.fileName } (${ line + 1 },${ character + 1 }): ${ msg }`,
-            });
-        });
+        result.diagnostics = fallbackTypescript.getPreEmitDiagnostics(languageService.getProgram());
 
         Object.keys(result.files).forEach((key) => {
             const file: ICompilerFile = result.files[key];
