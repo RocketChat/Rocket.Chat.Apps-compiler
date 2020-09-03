@@ -28,7 +28,7 @@ export class AppsCompiler implements IAppsCompiler {
             noImplicitReturns: true,
             emitDecoratorMetadata: true,
             experimentalDecorators: true,
-            // types: ['node'],
+            types: ['node'],
             // Set this to true if you would like to see the module resolution process
             traceResolution: false,
         };
