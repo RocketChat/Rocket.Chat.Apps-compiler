@@ -10,9 +10,7 @@ function getPath() {
 
 (async () => {
     const compiler = new AppsCompiler();
-    const errors = await compiler.compile(getPath());
+    const diagnostics = await compiler.compile(getPath());
 
-    const files = compiler.output();
-
-    console.log(errors, files);
+    console.log(diagnostics);
 })();
