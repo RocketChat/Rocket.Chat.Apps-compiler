@@ -292,20 +292,21 @@ export class AppsCompiler implements IAppsCompiler {
                 allImports.push(...imports);
                 if (imports.includes(extendedAppName)) {
                     try {
-                        const appsEngineAppPath = 'node_modules/@rocket.chat/apps-engine/definition/App';
-                        const modulePath = n.moduleSpecifier.getText().slice(1, -1);
-                        const moduleFullPath = path.isAbsolute(modulePath) ? modulePath : modulePath.startsWith('.')
-                            ? path.join(this.wd, modulePath)
-                            : path.join(this.wd, 'node_modules', modulePath);
+                        const appsEngineAppPath = path.join(this.wd, 'node_modules/@rocket.chat/apps-engine/definition/App');
+                        const extendedAppShortPath = n.moduleSpecifier.getText().slice(1, -1);
+                        const extendedAppPath = path.isAbsolute(extendedAppShortPath) ? extendedAppShortPath // absolute path
+                            : extendedAppShortPath.startsWith('.')
+                                ? path.join(this.wd, extendedAppShortPath) // relative path
+                                : path.join(this.wd, 'node_modules', extendedAppShortPath); // external path (node_modules)
                         const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
                         const mockLogger = { debug: () => { } };
-                        const engine = import(path.join(this.wd, appsEngineAppPath));
-                        const app = import(moduleFullPath);
-                        const importedName = exports.has(extendedAppName) ? exports.get(extendedAppName) : extendedAppName;
+                        const engine = import(appsEngineAppPath);
+                        const extendedApp = import(extendedAppPath);
+                        const importedSymbol = exports.has(extendedAppName) ? exports.get(extendedAppName) : extendedAppName;
 
-                        app.then((app) => {
+                        extendedApp.then((App) => {
                             engine.then((engine) => {
-                                const extendedApp = new app[importedName](mockInfo, mockLogger);
+                                const extendedApp = new App[importedSymbol](mockInfo, mockLogger);
 
                                 if (!(extendedApp instanceof engine.App)) {
                                     throw new Error('App must extend apps-engine\'s "App" abstract class.');
