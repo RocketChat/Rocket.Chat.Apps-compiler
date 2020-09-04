@@ -56,7 +56,8 @@
                 "import/order": ["error", {
                     "groups": [["builtin", "external"], "internal"]
                 }],
-                "no-return-assign": "off"
+                "no-return-assign": "off",
+                "no-nested-ternary": "off"
             },
             "env": {
                 "commonjs": true,
