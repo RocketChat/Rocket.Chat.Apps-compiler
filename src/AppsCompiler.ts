@@ -275,6 +275,7 @@ export class AppsCompiler implements IAppsCompiler {
 
     private checkInheritance(src: SourceFile, extendedAppName: string): void {
         const allImports: string[] = [];
+
         this.ts.forEachChild(src, (n) => {
             if (this.ts.isImportDeclaration(n)) {
                 const exports: Map<string, string> = new Map();
@@ -311,7 +312,7 @@ export class AppsCompiler implements IAppsCompiler {
                                 if (!(extendedApp instanceof engine.App)) {
                                     throw new Error('App must extend apps-engine\'s "App" abstract class.');
                                 }
-                            }).catch(console.warn);
+                            }).catch(console.error);
                         });
                     } catch (err) {
                         console.error(err, 'Try to run `npm install` in your app folder to fix it.');
