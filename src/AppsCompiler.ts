@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import fallbackTypescript, {
-    CompilerOptions, Diagnostic, EmitOutput, HeritageClause, LanguageServiceHost, ModuleResolutionHost, ResolvedModule
+    CompilerOptions, Diagnostic, EmitOutput, HeritageClause, LanguageServiceHost, ModuleResolutionHost, ResolvedModule, SourceFile
 } from 'typescript';
 
 import { getAppSource } from './compiler/getAppSouce';
@@ -149,7 +149,6 @@ export class AppsCompiler implements IAppsCompiler {
         }
 
         const src = languageService.getProgram().getSourceFile(appInfo.classFile);
-        let extendedAppName = '';
 
         this.ts.forEachChild(src, (n) => {
             if (!this.ts.isClassDeclaration(n)) return;
@@ -160,7 +159,7 @@ export class AppsCompiler implements IAppsCompiler {
 
                     this.ts.forEachChild(node, (nn) => {
                         if (e.token === this.ts.SyntaxKind.ExtendsKeyword) {
-                            extendedAppName = nn.getText();
+                            this.checkInheritance(src, nn.getText());
                         } else if (e.token === this.ts.SyntaxKind.ImplementsKeyword) {
                             result.implemented.push(nn.getText());
                         } else {
@@ -170,55 +169,6 @@ export class AppsCompiler implements IAppsCompiler {
                 }
             });
         });
-
-        const allImports: string[] = [];
-        this.ts.forEachChild(src, (n) => {
-            if (this.ts.isImportDeclaration(n)) {
-                const exports: Map<string, string> = new Map();
-                const imports = (n.importClause.namedBindings || n.importClause.name).getText()
-                    .replace(/[{|}]/g, '')
-                    .split(',')
-                    .map((identifier) => {
-                        const [exported, renamed] = identifier.split(' as ');
-
-                        if (exported && renamed) {
-                            exports.set(renamed.trim(), exported.trim());
-                        }
-                        return identifier.replace(/^.*as/, '').trim();
-                    });
-                allImports.push(...imports);
-                if (imports.includes(extendedAppName)) {
-                    try {
-                        const appsEngineAppPath = 'node_modules/@rocket.chat/apps-engine/definition/App';
-                        const modulePath = n.moduleSpecifier.getText().slice(1, -1);
-                        const moduleFullPath = path.isAbsolute(modulePath) ? modulePath : modulePath.startsWith('.')
-                            ? path.join(this.wd, modulePath)
-                            : path.join(this.wd, 'node_modules', modulePath);
-                        const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
-                        const mockLogger = { debug: () => { } };
-                        const engine = import(path.join(this.wd, appsEngineAppPath));
-                        const app = import(moduleFullPath);
-                        const importedName = exports.has(extendedAppName) ? exports.get(extendedAppName) : extendedAppName;
-
-                        app.then((app) => {
-                            engine.then((engine) => {
-                                const extendedApp = new app[importedName](mockInfo, mockLogger);
-
-                                if (!(extendedApp instanceof engine.App)) {
-                                    throw new Error('App must extend apps-engine\'s "App" abstract class.');
-                                }
-                            }).catch(console.warn);
-                        });
-                    } catch (err) {
-                        console.error(err, 'Try to run `npm install` in your app folder to fix it.');
-                    }
-                }
-            }
-        });
-
-        if (!allImports.includes(extendedAppName)) {
-            throw new Error('App must extend apps-engine\'s "App" abstract class.');
-        }
 
         function logErrors(fileName: string) {
             const allDiagnostics = languageService.getCompilerOptionsDiagnostics()
@@ -321,6 +271,57 @@ export class AppsCompiler implements IAppsCompiler {
         };
 
         return this.libraryFiles[norm];
+    }
+
+    private checkInheritance(src: SourceFile, extendedAppName: string): void {
+        const allImports: string[] = [];
+        this.ts.forEachChild(src, (n) => {
+            if (this.ts.isImportDeclaration(n)) {
+                const exports: Map<string, string> = new Map();
+                const imports = (n.importClause.namedBindings || n.importClause.name).getText()
+                    .replace(/[{|}]/g, '')
+                    .split(',')
+                    .map((identifier) => {
+                        const [exported, renamed] = identifier.split(' as ');
+
+                        if (exported && renamed) {
+                            exports.set(renamed.trim(), exported.trim());
+                        }
+                        return identifier.replace(/^.*as/, '').trim();
+                    });
+                allImports.push(...imports);
+                if (imports.includes(extendedAppName)) {
+                    try {
+                        const appsEngineAppPath = 'node_modules/@rocket.chat/apps-engine/definition/App';
+                        const modulePath = n.moduleSpecifier.getText().slice(1, -1);
+                        const moduleFullPath = path.isAbsolute(modulePath) ? modulePath : modulePath.startsWith('.')
+                            ? path.join(this.wd, modulePath)
+                            : path.join(this.wd, 'node_modules', modulePath);
+                        const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
+                        const mockLogger = { debug: () => { } };
+                        const engine = import(path.join(this.wd, appsEngineAppPath));
+                        const app = import(moduleFullPath);
+                        const importedName = exports.has(extendedAppName) ? exports.get(extendedAppName) : extendedAppName;
+
+                        app.then((app) => {
+                            engine.then((engine) => {
+                                const extendedApp = new app[importedName](mockInfo, mockLogger);
+
+                                if (!(extendedApp instanceof engine.App)) {
+                                    throw new Error('App must extend apps-engine\'s "App" abstract class.');
+                                }
+                            }).catch(console.warn);
+                        });
+                    } catch (err) {
+                        console.error(err, 'Try to run `npm install` in your app folder to fix it.');
+                    }
+                }
+            }
+        });
+
+        if (!allImports.includes(extendedAppName)) {
+            throw new Error('App must extend apps-engine\'s "App" abstract class.');
+        }
     }
 
     private isValidFile(file: ICompilerFile): boolean {
