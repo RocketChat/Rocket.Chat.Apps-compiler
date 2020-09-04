@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import fallbackTypescript, {
-    CompilerOptions, Diagnostic, EmitOutput, HeritageClause, LanguageServiceHost, ModuleResolutionHost, ResolvedModule,
+    CompilerOptions, Diagnostic, EmitOutput, HeritageClause, LanguageServiceHost, ModuleResolutionHost, ResolvedModule
 } from 'typescript';
 
 import { getAppSource } from './compiler/getAppSouce';
@@ -46,15 +46,19 @@ export class AppsCompiler implements IAppsCompiler {
     public async compile(path: string): Promise<Diagnostic[]> {
         this.wd = path;
 
-        const source = await getAppSource(path);
-        const { files, implemented, diagnostics } = await this.toJs(source);
+        try {
+            const source = await getAppSource(path);
 
-        this.compiled = Object.entries(files)
-            .map(([, { name, compiled }]) => ({ [name]: compiled }))
-            .reduce((acc, cur) => Object.assign(acc, cur), {});
-        this.implemented = implemented;
+            const { files, implemented, diagnostics } = this.toJs(source);
 
-        return diagnostics;
+            this.compiled = Object.entries(files)
+                .map(([, { name, compiled }]) => ({ [name]: compiled }))
+                .reduce((acc, cur) => Object.assign(acc, cur), {});
+            this.implemented = implemented;
+            return diagnostics;
+        } catch (err) {
+            console.warn(err);
+        }
     }
 
     public output(): IFiles {
@@ -69,7 +73,7 @@ export class AppsCompiler implements IAppsCompiler {
         return Buffer.from(outputPath);
     }
 
-    private async toJs({ appInfo, files }: IAppSource): Promise<ICompilerResult> {
+    private toJs({ appInfo, files }: IAppSource): ICompilerResult {
         if (!appInfo.classFile || !files[appInfo.classFile] || !this.isValidFile(files[appInfo.classFile])) {
             throw new Error(`Invalid App package. Could not find the classFile (${ appInfo.classFile }) file.`);
         }
@@ -145,27 +149,30 @@ export class AppsCompiler implements IAppsCompiler {
         }
 
         const src = languageService.getProgram().getSourceFile(appInfo.classFile);
+        let extendedAppName = '';
 
         this.ts.forEachChild(src, (n) => {
-            let baseAppName = '';
-            if (this.ts.isClassDeclaration(n)) {
-                this.ts.forEachChild(n, (node) => {
-                    if (this.ts.isHeritageClause(n)) {
-                        const e = node as HeritageClause;
+            if (!this.ts.isClassDeclaration(n)) return;
 
-                        this.ts.forEachChild(node, (nn) => {
-                            if (e.token === this.ts.SyntaxKind.ExtendsKeyword) {
-                                baseAppName = nn.getText();
-                            } else if (e.token === this.ts.SyntaxKind.ImplementsKeyword) {
-                                result.implemented.push(nn.getText());
-                            } else {
-                                console.log(e.token, nn.getText());
-                            }
-                        });
-                    }
-                });
-            }
+            this.ts.forEachChild(n, (node) => {
+                if (this.ts.isHeritageClause(node)) {
+                    const e = node as HeritageClause;
 
+                    this.ts.forEachChild(node, (nn) => {
+                        if (e.token === this.ts.SyntaxKind.ExtendsKeyword) {
+                            extendedAppName = nn.getText();
+                        } else if (e.token === this.ts.SyntaxKind.ImplementsKeyword) {
+                            result.implemented.push(nn.getText());
+                        } else {
+                            console.log(e.token, nn.getText());
+                        }
+                    });
+                }
+            });
+        });
+
+        const allImports: string[] = [];
+        this.ts.forEachChild(src, (n) => {
             if (this.ts.isImportDeclaration(n)) {
                 const exports: Map<string, string> = new Map();
                 const imports = (n.importClause.namedBindings || n.importClause.name).getText()
@@ -175,31 +182,43 @@ export class AppsCompiler implements IAppsCompiler {
                         const [exported, renamed] = identifier.split(' as ');
 
                         if (exported && renamed) {
-                            exports.set(exported.trim(), renamed.trim());
+                            exports.set(renamed.trim(), exported.trim());
                         }
                         return identifier.replace(/^.*as/, '').trim();
                     });
-                if (imports.includes(baseAppName)) {
-                    const appEngineAppPath = 'node_modules/@rocket.chat/apps-engine/definition/App';
-                    const modulePath = n.moduleSpecifier.getText().slice(1, -1);
-                    const moduleFullPath = path.isAbsolute(modulePath) ? modulePath : modulePath.startsWith('.')
-                        ? path.join(this.wd, modulePath)
-                        : path.join(this.wd, 'node_modules', modulePath);
-                    const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
-                    const mockLogger = { debug: console.log };
-                    const engine = import(path.join(this.wd, appEngineAppPath));
-                    const app = import(moduleFullPath);
+                allImports.push(...imports);
+                if (imports.includes(extendedAppName)) {
+                    try {
+                        const appsEngineAppPath = 'node_modules/@rocket.chat/apps-engine/definition/App';
+                        const modulePath = n.moduleSpecifier.getText().slice(1, -1);
+                        const moduleFullPath = path.isAbsolute(modulePath) ? modulePath : modulePath.startsWith('.')
+                            ? path.join(this.wd, modulePath)
+                            : path.join(this.wd, 'node_modules', modulePath);
+                        const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
+                        const mockLogger = { debug: () => { } };
+                        const engine = import(path.join(this.wd, appsEngineAppPath));
+                        const app = import(moduleFullPath);
+                        const importedName = exports.has(extendedAppName) ? exports.get(extendedAppName) : extendedAppName;
 
-                    const importedName = exports.has(baseAppName) ? exports.get(baseAppName) : baseAppName;
+                        app.then((app) => {
+                            engine.then((engine) => {
+                                const extendedApp = new app[importedName](mockInfo, mockLogger);
 
-                    app.then((app) => {
-                        engine.then((engine) => {
-                            console.log(new app[importedName](mockInfo, mockLogger) instanceof engine[baseAppName]);
+                                if (!(extendedApp instanceof engine.App)) {
+                                    throw new Error('App must extend apps-engine\'s "App" abstract class.');
+                                }
+                            }).catch(console.warn);
                         });
-                    });
+                    } catch (err) {
+                        console.error(err, 'Try to run `npm install` in your app folder to fix it.');
+                    }
                 }
             }
         });
+
+        if (!allImports.includes(extendedAppName)) {
+            throw new Error('App must extend apps-engine\'s "App" abstract class.');
+        }
 
         function logErrors(fileName: string) {
             const allDiagnostics = languageService.getCompilerOptionsDiagnostics()
