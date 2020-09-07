@@ -269,5 +269,3 @@ export class AppsCompiler implements IAppsCompiler {
             && file.content.trim() !== '';
     }
 }
-
-export default AppsCompiler;
