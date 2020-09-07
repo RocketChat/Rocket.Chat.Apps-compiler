@@ -86,5 +86,5 @@ export async function getAppSource(path: string): Promise<IAppSource> {
     const appInfo: IAppInfo = getAppInfo(projectFiles);
     const files: IMapCompilerFile = makeICompilerFileMap(tsFiles);
 
-    return { appInfo, files };
+    return { appInfo, sourceFiles: files };
 }

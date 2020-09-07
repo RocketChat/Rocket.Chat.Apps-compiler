@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import fallbackTypescript, {
+import * as fallbackTypescript from 'typescript';
+import {
     CompilerOptions, Diagnostic, EmitOutput, HeritageClause, LanguageServiceHost, ModuleResolutionHost, ResolvedModule, SourceFile
 } from 'typescript';
 
@@ -73,7 +74,7 @@ export class AppsCompiler implements IAppsCompiler {
         return Buffer.from(outputPath);
     }
 
-    private toJs({ appInfo, files }: IAppSource, appPath: string): ICompilerResult {
+    private toJs({ appInfo, sourceFiles: files }: IAppSource, appPath: string): ICompilerResult {
         if (!appInfo.classFile || !files[appInfo.classFile] || !this.isValidFile(files[appInfo.classFile])) {
             throw new Error(`Invalid App package. Could not find the classFile (${ appInfo.classFile }) file.`);
         }
@@ -184,7 +185,12 @@ export class AppsCompiler implements IAppsCompiler {
             });
         }
 
-        result.diagnostics = this.ts.getPreEmitDiagnostics(languageService.getProgram());
+        // TypeScript alerted for `readonly` value from `getPreEmitDiagnostics` being assigned to the mutable `result.diagnostics`
+        Object.defineProperty(result, 'diagnostics', {
+            value: this.ts.getPreEmitDiagnostics(languageService.getProgram()),
+            configurable: false,
+            writable: false,
+        });
 
         Object.keys(result.files).forEach((key) => {
             const file: ICompilerFile = result.files[key];
