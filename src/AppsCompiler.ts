@@ -37,7 +37,7 @@ export class AppsCompiler implements IAppsCompiler {
 
     public async compile(path: string): Promise<fallbackTypescript.Diagnostic[]> {
         const source = await getAppSource(path);
-        const { files, implemented, diagnostics } = this.toJs(source);
+        const { files, implemented, diagnostics } = this.toJs(source, path);
 
         this.compiled = Object.entries(files)
             .map(([, { name, compiled }]) => ({ [name]: compiled }))
@@ -59,7 +59,7 @@ export class AppsCompiler implements IAppsCompiler {
         return Buffer.from(outputPath);
     }
 
-    private toJs({ appInfo, files }: IAppSource): ICompilerResult {
+    private toJs({ appInfo, files }: IAppSource, appPath: string): ICompilerResult {
         if (!appInfo.classFile || !files[appInfo.classFile] || !this.isValidFile(files[appInfo.classFile])) {
             throw new Error(`Invalid App package. Could not find the classFile (${ appInfo.classFile }) file.`);
         }
@@ -75,9 +75,6 @@ export class AppsCompiler implements IAppsCompiler {
 
             result.files[key].name = path.normalize(result.files[key].name);
         });
-
-        const cwd = __dirname.includes('node_modules/@rocket.chat/apps-engine')
-            ? __dirname.split('node_modules/@rocket.chat/apps-engine')[0] : process.cwd();
 
         const host: fallbackTypescript.LanguageServiceHost = {
             getScriptFileNames: () => Object.keys(result.files),
@@ -97,7 +94,7 @@ export class AppsCompiler implements IAppsCompiler {
                 return fallbackTypescript.ScriptSnapshot.fromString(file.content);
             },
             getCompilationSettings: () => this.compilerOptions,
-            getCurrentDirectory: () => cwd,
+            getCurrentDirectory: () => appPath,
             getDefaultLibFileName: () => fallbackTypescript.getDefaultLibFilePath(this.compilerOptions),
             fileExists: (fileName: string): boolean => fallbackTypescript.sys.fileExists(fileName),
             readFile: (fileName: string): string | undefined => fallbackTypescript.sys.readFile(fileName),
@@ -107,7 +104,7 @@ export class AppsCompiler implements IAppsCompiler {
                 const moduleResHost: fallbackTypescript.ModuleResolutionHost = { fileExists: host.fileExists, readFile: host.readFile, trace: (traceDetail) => console.log(traceDetail) };
 
                 for (const moduleName of moduleNames) {
-                    this.resolver(moduleName, resolvedModules, containingFile, result, cwd, moduleResHost);
+                    this.resolver(moduleName, resolvedModules, containingFile, result, appPath, moduleResHost);
                 }
 
                 // @TODO deal with this later
@@ -269,5 +266,3 @@ export class AppsCompiler implements IAppsCompiler {
             && file.content.trim() !== '';
     }
 }
-
-export default AppsCompiler;
