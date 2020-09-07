@@ -1,14 +1,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as fallbackTypescript from 'typescript';
+import fallbackTypescript, {
+    CompilerOptions, Diagnostic, EmitOutput, HeritageClause, LanguageServiceHost, ModuleResolutionHost, ResolvedModule, SourceFile
+} from 'typescript';
 
 import { getAppSource } from './compiler/getAppSouce';
 import { IAppsCompiler, IAppSource, ICompilerFile, ICompilerResult, IMapCompilerFile } from './definition';
 import { IFiles } from './definition/IFiles';
 import { Utilities } from './misc/Utilities';
 
+type TypeScript = typeof fallbackTypescript;
+
 export class AppsCompiler implements IAppsCompiler {
-    private readonly compilerOptions: fallbackTypescript.CompilerOptions;
+    private readonly compilerOptions: CompilerOptions;
 
     private libraryFiles: IMapCompilerFile;
 
@@ -16,11 +20,15 @@ export class AppsCompiler implements IAppsCompiler {
 
     private implemented: string[];
 
-    constructor() {
+    private wd: string;
+
+    constructor(
+        private readonly ts: TypeScript = fallbackTypescript,
+    ) {
         this.compilerOptions = {
-            target: fallbackTypescript.ScriptTarget.ES2017,
-            module: fallbackTypescript.ModuleKind.CommonJS,
-            moduleResolution: fallbackTypescript.ModuleResolutionKind.NodeJs,
+            target: this.ts.ScriptTarget.ES2017,
+            module: this.ts.ModuleKind.CommonJS,
+            moduleResolution: this.ts.ModuleResolutionKind.NodeJs,
             declaration: false,
             noImplicitAny: false,
             removeComments: true,
@@ -35,16 +43,22 @@ export class AppsCompiler implements IAppsCompiler {
         this.libraryFiles = {};
     }
 
-    public async compile(path: string): Promise<fallbackTypescript.Diagnostic[]> {
-        const source = await getAppSource(path);
-        const { files, implemented, diagnostics } = this.toJs(source, path);
+    public async compile(path: string): Promise<Diagnostic[]> {
+        this.wd = path;
 
-        this.compiled = Object.entries(files)
-            .map(([, { name, compiled }]) => ({ [name]: compiled }))
-            .reduce((acc, cur) => Object.assign(acc, cur), {});
-        this.implemented = implemented;
+        try {
+            const source = await getAppSource(path);
 
-        return diagnostics;
+            const { files, implemented, diagnostics } = this.toJs(source, path);
+
+            this.compiled = Object.entries(files)
+                .map(([, { name, compiled }]) => ({ [name]: compiled }))
+                .reduce((acc, cur) => Object.assign(acc, cur), {});
+            this.implemented = implemented;
+            return diagnostics;
+        } catch (err) {
+            console.warn(err);
+        }
     }
 
     public output(): IFiles {
@@ -76,7 +90,7 @@ export class AppsCompiler implements IAppsCompiler {
             result.files[key].name = path.normalize(result.files[key].name);
         });
 
-        const host: fallbackTypescript.LanguageServiceHost = {
+        const host = {
             getScriptFileNames: () => Object.keys(result.files),
             getScriptVersion: (fileName) => {
                 fileName = path.normalize(fileName);
@@ -91,17 +105,18 @@ export class AppsCompiler implements IAppsCompiler {
                     return;
                 }
 
-                return fallbackTypescript.ScriptSnapshot.fromString(file.content);
+                return this.ts.ScriptSnapshot.fromString(file.content);
             },
             getCompilationSettings: () => this.compilerOptions,
             getCurrentDirectory: () => appPath,
-            getDefaultLibFileName: () => fallbackTypescript.getDefaultLibFilePath(this.compilerOptions),
-            fileExists: (fileName: string): boolean => fallbackTypescript.sys.fileExists(fileName),
-            readFile: (fileName: string): string | undefined => fallbackTypescript.sys.readFile(fileName),
-            resolveModuleNames: (moduleNames: Array<string>, containingFile: string): Array<fallbackTypescript.ResolvedModule> => {
-                const resolvedModules: fallbackTypescript.ResolvedModule[] = [];
-                // tslint:disable-next-line
-                const moduleResHost: fallbackTypescript.ModuleResolutionHost = { fileExists: host.fileExists, readFile: host.readFile, trace: (traceDetail) => console.log(traceDetail) };
+            getDefaultLibFileName: () => this.ts.getDefaultLibFilePath(this.compilerOptions),
+            fileExists: (fileName: string): boolean => this.ts.sys.fileExists(fileName),
+            readFile: (fileName: string): string | undefined => this.ts.sys.readFile(fileName),
+            resolveModuleNames: (moduleNames: Array<string>, containingFile: string): Array<ResolvedModule> => {
+                const resolvedModules: ResolvedModule[] = [];
+                const moduleResHost: ModuleResolutionHost = {
+                    fileExists: host.fileExists, readFile: host.readFile, trace: (traceDetail) => console.log(traceDetail),
+                };
 
                 for (const moduleName of moduleNames) {
                     this.resolver(moduleName, resolvedModules, containingFile, result, appPath, moduleResHost);
@@ -115,9 +130,9 @@ export class AppsCompiler implements IAppsCompiler {
 
                 return resolvedModules;
             },
-        };
+        } as LanguageServiceHost;
 
-        const languageService = fallbackTypescript.createLanguageService(host, fallbackTypescript.createDocumentRegistry());
+        const languageService = this.ts.createLanguageService(host, this.ts.createDocumentRegistry());
 
         const coDiag = languageService.getCompilerOptionsDiagnostics();
         if (coDiag.length !== 0) {
@@ -132,25 +147,24 @@ export class AppsCompiler implements IAppsCompiler {
 
         const src = languageService.getProgram().getSourceFile(appInfo.classFile);
 
-        fallbackTypescript.forEachChild(src, (n) => {
-            if (n.kind === fallbackTypescript.SyntaxKind.ClassDeclaration) {
-                fallbackTypescript.forEachChild(n, (node) => {
-                    if (node.kind === fallbackTypescript.SyntaxKind.HeritageClause) {
-                        const e = node as fallbackTypescript.HeritageClause;
-                        fallbackTypescript.forEachChild(node, (nn) => {
-                            if (e.token === fallbackTypescript.SyntaxKind.ExtendsKeyword) {
-                                if (nn.getText() !== 'App') {
-                                    throw new Error('App must extend the "App" abstract class.');
-                                }
-                            } else if (e.token === fallbackTypescript.SyntaxKind.ImplementsKeyword) {
-                                result.implemented.push(nn.getText());
-                            } else {
-                                console.log(e.token, nn.getText());
-                            }
-                        });
-                    }
-                });
-            }
+        this.ts.forEachChild(src, (n) => {
+            if (!this.ts.isClassDeclaration(n)) return;
+
+            this.ts.forEachChild(n, (node) => {
+                if (this.ts.isHeritageClause(node)) {
+                    const e = node as HeritageClause;
+
+                    this.ts.forEachChild(node, (nn) => {
+                        if (e.token === this.ts.SyntaxKind.ExtendsKeyword) {
+                            this.checkInheritance(src, nn.getText());
+                        } else if (e.token === this.ts.SyntaxKind.ImplementsKeyword) {
+                            result.implemented.push(nn.getText());
+                        } else {
+                            console.log(e.token, nn.getText());
+                        }
+                    });
+                }
+            });
         });
 
         function logErrors(fileName: string) {
@@ -159,7 +173,7 @@ export class AppsCompiler implements IAppsCompiler {
                 .concat(languageService.getSemanticDiagnostics(fileName));
 
             allDiagnostics.forEach((diagnostic) => {
-                const message = fallbackTypescript.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+                const message = this.ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
 
                 if (diagnostic.file) {
                     const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
@@ -170,11 +184,11 @@ export class AppsCompiler implements IAppsCompiler {
             });
         }
 
-        result.diagnostics = fallbackTypescript.getPreEmitDiagnostics(languageService.getProgram());
+        result.diagnostics = this.ts.getPreEmitDiagnostics(languageService.getProgram());
 
         Object.keys(result.files).forEach((key) => {
             const file: ICompilerFile = result.files[key];
-            const output: fallbackTypescript.EmitOutput = languageService.getEmitOutput(file.name);
+            const output: EmitOutput = languageService.getEmitOutput(file.name);
 
             if (output.emitSkipped) {
                 console.log('Emitting failed for:', file.name);
@@ -200,11 +214,11 @@ export class AppsCompiler implements IAppsCompiler {
 
     public resolver(
         moduleName: string,
-        resolvedModules: Array<fallbackTypescript.ResolvedModule>,
+        resolvedModules: Array<ResolvedModule>,
         containingFile: string,
         result: ICompilerResult,
         cwd: string,
-        moduleResHost: fallbackTypescript.ModuleResolutionHost,
+        moduleResHost: ModuleResolutionHost,
     ): number {
         // Keep compatibility with apps importing apps-ts-definition
         moduleName = moduleName.replace(/@rocket.chat\/apps-ts-definition\//, '@rocket.chat/apps-engine/definition/');
@@ -224,7 +238,7 @@ export class AppsCompiler implements IAppsCompiler {
         }
 
         // Now, let's try the "standard" resolution but with our little twist on it
-        const rs = fallbackTypescript.resolveModuleName(moduleName, containingFile, this.compilerOptions, moduleResHost);
+        const rs = this.ts.resolveModuleName(moduleName, containingFile, this.compilerOptions, moduleResHost);
         if (rs.resolvedModule) {
             return resolvedModules.push(rs.resolvedModule);
         }
@@ -254,6 +268,59 @@ export class AppsCompiler implements IAppsCompiler {
         };
 
         return this.libraryFiles[norm];
+    }
+
+    private checkInheritance(src: SourceFile, extendedSymbol: string): void {
+        const allImports: string[] = [];
+
+        this.ts.forEachChild(src, (n) => {
+            if (this.ts.isImportDeclaration(n)) {
+                const renamings: Map<string, string> = new Map();
+                const imports = (n.importClause.namedBindings || n.importClause.name).getText()
+                    .replace(/[{|}]/g, '')
+                    .split(',')
+                    .map((identifier) => {
+                        const [exported, renamed] = identifier.split(' as ');
+
+                        if (exported && renamed) {
+                            renamings.set(renamed.trim(), exported.trim());
+                        }
+                        return identifier.replace(/^.*as/, '').trim();
+                    });
+                allImports.push(...imports);
+                if (imports.includes(extendedSymbol)) {
+                    try {
+                        const appsEngineAppPath = path.join(this.wd, 'node_modules/@rocket.chat/apps-engine/definition/App');
+                        const extendedAppShortPath = n.moduleSpecifier.getText().slice(1, -1);
+                        const extendedAppPath = path.isAbsolute(extendedAppShortPath) ? extendedAppShortPath // absolute path
+                            : extendedAppShortPath.startsWith('.')
+                                ? path.join(this.wd, extendedAppShortPath) // relative path
+                                : path.join(this.wd, 'node_modules', extendedAppShortPath); // external path (node_modules)
+                        const engine = import(appsEngineAppPath);
+                        const extendedApp = import(extendedAppPath);
+                        const importedSymbol = renamings.has(extendedSymbol) ? renamings.get(extendedSymbol) : extendedSymbol;
+
+                        extendedApp.then((App) => {
+                            engine.then((engine) => {
+                                const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
+                                const mockLogger = { debug: () => {} };
+                                const extendedApp = new App[importedSymbol](mockInfo, mockLogger);
+
+                                if (!(extendedApp instanceof engine.App)) {
+                                    throw new Error('App must extend apps-engine\'s "App" abstract class.');
+                                }
+                            }).catch(console.error);
+                        });
+                    } catch (err) {
+                        console.error(err, 'Try to run `npm install` in your app folder to fix it.');
+                    }
+                }
+            }
+        });
+
+        if (!allImports.includes(extendedSymbol)) {
+            throw new Error('App must extend apps-engine\'s "App" abstract class.');
+        }
     }
 
     private isValidFile(file: ICompilerFile): boolean {
