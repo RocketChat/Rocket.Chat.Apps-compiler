@@ -1,7 +1,7 @@
 {
     "compileOnSave": false,
     "compilerOptions": {
-        "sourceMap": true,
+        "sourceMap": false,
         "target": "esnext",
         "module": "commonjs",
         "declaration": true,
@@ -23,10 +23,6 @@
     },
     "exclude": [
         "node_modules",
-        "server",
-        "client",
-        "src/definition",
-        "examples"
     ],
     "include": [
         "src"
