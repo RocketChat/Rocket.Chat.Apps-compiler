@@ -1,11 +1,12 @@
 {
-    "name": "rocket.chat.apps-compiler",
+    "name": "@rocket.chat/apps-compiler",
     "version": "0.0.1",
     "description": "The Rocket.Chat apps compiler",
-    "main": "src/index.ts",
+    "main": "dist/index.js",
     "scripts": {
         "test": "mocha -r ts-node/register './tests/**/*.spec.ts'",
         "test:watch": "mocha --require ts-node/register --watch --watch-files src, 'tests/**/*.ts'",
+        "build": "tsc",
         "lint": "npx eslint src/**/*.ts",
         "dev": "nodemon",
         "compile": "node -r ts-node/register ./custom-scripts/compile.ts",
@@ -46,6 +47,7 @@
         "@types/yazl": "^2.4.1"
     },
     "dependencies": {
+        "fs-extra": "^8.1.0",
         "lodash.clonedeep": "^4.5.0",
         "typescript": "^2.9.2",
         "@rocket.chat/apps-engine": "1.16.0",

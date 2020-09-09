@@ -20,6 +20,7 @@ export class Utilities {
         return cloneDeep(item);
     }
 
+    // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
     public static deepFreeze<T>(item: any): T {
         Object.freeze(item);
 

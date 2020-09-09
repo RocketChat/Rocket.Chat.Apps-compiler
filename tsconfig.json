@@ -1,7 +1,7 @@
 {
     "compileOnSave": false,
     "compilerOptions": {
-        "sourceMap": true,
+        "sourceMap": false,
         "target": "esnext",
         "module": "commonjs",
         "declaration": true,
@@ -11,6 +11,7 @@
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "moduleResolution": "node",
+        "esModuleInterop": true,
         "types": [
             "node"
         ],
@@ -22,10 +23,6 @@
     },
     "exclude": [
         "node_modules",
-        "server",
-        "client",
-        "src/definition",
-        "examples"
     ],
     "include": [
         "src"
