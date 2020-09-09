@@ -5,6 +5,6 @@ import { AppsCompiler } from '../src/AppsCompiler';
 
 describe('AppsCompiler', () => {
     it('shouldn\'t throw an error', () => {
-        expect(new AppsCompiler()).not.throw();
+        expect(() => new AppsCompiler()).not.throw();
     });
 });
