@@ -71,7 +71,7 @@ export class AppPackager {
         for (const realPath of matches) {
             const zipPath = path.relative(fd.folder, realPath);
 
-            // @NOTE (thassio) needs to be checked
+            // @ts-ignore
             const fileStat = await fs.stat(realPath);
 
             const options: Partial<Yazl.Options> = {
