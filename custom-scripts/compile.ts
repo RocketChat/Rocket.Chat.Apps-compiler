@@ -10,7 +10,6 @@ function getPath() {
 
 (async () => {
     const compiler = new AppsCompiler();
-    const diagnostics = await compiler.compile(getPath());
-
-    console.log(diagnostics);
+    await compiler.compile(getPath());
+    await compiler.outputZip('/tmp');
 })();

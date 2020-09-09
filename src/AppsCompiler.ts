@@ -1,11 +1,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as fallbackTypescript from 'typescript';
+import { promisify } from 'util';
 
 import { getAppSource } from './compiler/getAppSouce';
 import { IAppsCompiler, IAppSource, ICompilerFile, ICompilerResult, IMapCompilerFile } from './definition';
 import { IFiles } from './definition/IFiles';
 import { Utilities } from './misc/Utilities';
+import { FolderDetails } from './misc/folderDetails';
+import { AppPackager } from './misc/appPackager';
 
 export class AppsCompiler implements IAppsCompiler {
     private readonly compilerOptions: fallbackTypescript.CompilerOptions;
@@ -15,6 +18,8 @@ export class AppsCompiler implements IAppsCompiler {
     private compiled: IFiles;
 
     private implemented: string[];
+
+    private sourceDiretory: string;
 
     constructor() {
         this.compilerOptions = {
@@ -39,6 +44,8 @@ export class AppsCompiler implements IAppsCompiler {
         const source = await getAppSource(path);
         const { files, implemented, diagnostics } = this.toJs(source);
 
+        this.setSourceDirectory(path);
+
         this.compiled = Object.entries(files)
             .map(([, { name, compiled }]) => ({ [name]: compiled }))
             .reduce((acc, cur) => Object.assign(acc, cur), {});
@@ -56,7 +63,18 @@ export class AppsCompiler implements IAppsCompiler {
     }
 
     public async outputZip(outputPath: string): Promise<Buffer> {
-        return Buffer.from(outputPath);
+        const fd = new FolderDetails(this.sourceDiretory);
+        try {
+            // @NOTE this is important for generating the zip file with the correct name
+            await fd.readInfoFile();
+        } catch (e) {
+            console.error(e && e.message ? e.message : e);
+            return;
+        }
+
+        const packager = new AppPackager(fd, this.compiled, outputPath);
+        const readFile = promisify(fs.readFile);
+        return readFile(await packager.zipItUp());
     }
 
     private toJs({ appInfo, files }: IAppSource): ICompilerResult {
@@ -267,6 +285,10 @@ export class AppsCompiler implements IAppsCompiler {
         return file.name.trim() !== ''
             && path.normalize(file.name)
             && file.content.trim() !== '';
+    }
+
+    private setSourceDirectory(sourceDiretory: string): void {
+        this.sourceDiretory = sourceDiretory;
     }
 }
 
