@@ -68,20 +68,20 @@ export class AppPackager {
             throw new Error('No files to package were found');
         }
 
-        for (const realPath of matches) {
-            const zipPath = path.relative(fd.folder, realPath);
+        await Promise.all(
+            matches.map(async (realPath) => {
+                const zipPath = path.relative(fd.folder, realPath);
 
-            // @ts-ignore
-            const fileStat = await fs.stat(realPath);
+                const fileStat = await fs.stat(realPath);
 
-            const options: Partial<Yazl.Options> = {
-                compress: true,
-                mtime: fileStat.mtime,
-                mode: fileStat.mode,
-            };
+                const options: Partial<Yazl.Options> = {
+                    compress: true,
+                    mtime: fileStat.mtime,
+                    mode: fileStat.mode,
+                };
 
-            this.zip.addFile(realPath, zipPath, options);
-        }
+                this.zip.addFile(realPath, zipPath, options);
+            }));
     }
 
     private zipFromCompiledSource(compiledFiles: IFiles): void {
