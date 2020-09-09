@@ -23,8 +23,6 @@ export class AppsCompiler implements IAppsCompiler {
 
     private implemented: string[];
 
-    private sourceDiretory: string;
-
     private wd: string;
 
     constructor(
@@ -55,8 +53,6 @@ export class AppsCompiler implements IAppsCompiler {
             const source = await getAppSource(path);
             const { files, implemented, diagnostics } = this.toJs(source, path);
 
-            this.setSourceDirectory(path);
-
             this.compiled = Object.entries(files)
                 .map(([, { name, compiled }]) => ({ [name]: compiled }))
                 .reduce((acc, cur) => Object.assign(acc, cur), {});
@@ -76,7 +72,7 @@ export class AppsCompiler implements IAppsCompiler {
     }
 
     public async outputZip(outputPath: string): Promise<Buffer> {
-        const fd = new FolderDetails(this.sourceDiretory);
+        const fd = new FolderDetails(this.wd);
         try {
             // @NOTE this is important for generating the zip file with the correct name
             await fd.readInfoFile();
@@ -348,9 +344,5 @@ export class AppsCompiler implements IAppsCompiler {
         return file.name.trim() !== ''
             && path.normalize(file.name)
             && file.content.trim() !== '';
-    }
-
-    private setSourceDirectory(sourceDiretory: string): void {
-        this.sourceDiretory = sourceDiretory;
     }
 }

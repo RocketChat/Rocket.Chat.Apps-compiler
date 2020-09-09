@@ -20,10 +20,7 @@ export class FolderDetails {
 
     public info: IAppInfo;
 
-    // constructor(private folder: string) {
     constructor(folder: string) {
-        // this.setFolder(process.cwd());
-        // @NOTE setting the folder like this for testing purposes only
         this.setFolder(folder);
         this.mainFile = '';
         this.info = {} as IAppInfo;
