@@ -8,6 +8,7 @@
         "noImplicitAny": true,
         "noUnusedLocals": true,
         "removeComments": false,
+        "resolveJsonModule": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "moduleResolution": "node",

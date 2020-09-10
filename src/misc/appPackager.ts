@@ -6,6 +6,7 @@ import { Glob, IOptions } from 'glob';
 
 import { FolderDetails } from './folderDetails';
 import { IFiles } from '../definition/IFiles';
+import packageInfo from '../../package.json';
 
 export class AppPackager {
     public static GlobOptions: IOptions = {
@@ -13,11 +14,7 @@ export class AppPackager {
         silent: true,
         ignore: [
             '**/README.md',
-            '**/package-lock.json',
-            '**/package.json',
             '**/tslint.json',
-            '**/tsconfig.json',
-            '**/*.js',
             '**/*.js.map',
             '**/*.ts',
             '**/*.d.ts',
@@ -29,16 +26,16 @@ export class AppPackager {
     };
 
     public static PackagerInfo: { [key: string]: string } = {
-        tool: '@rocket.chat/apps-cli',
-        version: '1.6.0',
+        tool: packageInfo.name,
+        version: packageInfo.version,
     };
 
     private zip: Yazl.ZipFile = new Yazl.ZipFile();
 
-    constructor(private fd: FolderDetails, private compiledFiles: IFiles, private outputDirectory: string) {}
+    constructor(private fd: FolderDetails, private compiledFiles: IFiles, private outputFilename: string) {}
 
     public async zipItUp(): Promise<string> {
-        const zipName = path.join(this.outputDirectory, `${ this.fd.info.nameSlug }_${ this.fd.info.version }.zip`);
+        const zipName = this.outputFilename;
 
         this.zip.addBuffer(Buffer.from(JSON.stringify(AppPackager.PackagerInfo)), '.packagedby', { compress: true });
 
