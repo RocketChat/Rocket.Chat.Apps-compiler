@@ -3,11 +3,14 @@ import * as path from 'path';
 import fallbackTypescript, {
     CompilerOptions, Diagnostic, EmitOutput, HeritageClause, LanguageServiceHost, ModuleResolutionHost, ResolvedModule, SourceFile
 } from 'typescript';
+import { promisify } from 'util';
 
 import { getAppSource } from './compiler/getAppSouce';
 import { IAppsCompiler, IAppSource, ICompilerFile, ICompilerResult, IMapCompilerFile } from './definition';
 import { IFiles } from './definition/IFiles';
 import { Utilities } from './misc/Utilities';
+import { FolderDetails } from './misc/folderDetails';
+import { AppPackager } from './misc/appPackager';
 
 type TypeScript = typeof fallbackTypescript;
 
@@ -48,7 +51,6 @@ export class AppsCompiler implements IAppsCompiler {
 
         try {
             const source = await getAppSource(path);
-
             const { files, implemented, diagnostics } = this.toJs(source, path);
 
             this.compiled = Object.entries(files)
@@ -70,7 +72,18 @@ export class AppsCompiler implements IAppsCompiler {
     }
 
     public async outputZip(outputPath: string): Promise<Buffer> {
-        return Buffer.from(outputPath);
+        const fd = new FolderDetails(this.wd);
+        try {
+            // @NOTE this is important for generating the zip file with the correct name
+            await fd.readInfoFile();
+        } catch (e) {
+            console.error(e && e.message ? e.message : e);
+            return;
+        }
+
+        const packager = new AppPackager(fd, this.compiled, outputPath);
+        const readFile = promisify(fs.readFile);
+        return readFile(await packager.zipItUp());
     }
 
     private toJs({ appInfo, files }: IAppSource, appPath: string): ICompilerResult {
