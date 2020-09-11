@@ -47,7 +47,7 @@ log.setLevel(process.env.LOG_LEVEL || 'info');
 
 async function run(cli: typeof CLIResult) {
     const sourceDir = path.resolve(cli.flags.sourceDir as string);
-    // const outputFile = path.resolve(cli.flags.outputFile as string);
+    const outputFile = path.resolve(cli.flags.outputFile as string);
 
     log.info('Compiling app at ', sourceDir);
 
@@ -84,10 +84,15 @@ async function run(cli: typeof CLIResult) {
         const diag = await compiler.compile(sourceDir);
 
         log.debug('Compilation complete, diagnostics: ', diag);
+        log.debug('Starting packaging...');
+
+        await compiler.outputZip(outputFile);
     } catch (error) {
         log.error('Compilation was unsuccessful');
         throw error;
     }
+
+    log.info('Compilation successful! Package saved at ', outputFile);
 }
 
 // eslint-disable-next-line
