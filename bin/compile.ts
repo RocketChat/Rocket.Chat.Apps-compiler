@@ -24,7 +24,7 @@ type CLIFlagTypes = {
     outputFile: meow.StringFlag,
 };
 
-const cli = meow<CLIFlagTypes>(`
+const CLIResult = meow<CLIFlagTypes>(`
 USAGE
     $ compile -s [path/to/source/app] -o [path/to/output/file]
 `,
@@ -45,7 +45,7 @@ USAGE
 
 log.setLevel(process.env.LOG_LEVEL || 'info');
 
-async function run(cli: meow.Result<CLIFlagTypes>) {
+async function run(cli: typeof CLIResult) {
     const sourceDir = path.resolve(cli.flags.sourceDir as string);
     // const outputFile = path.resolve(cli.flags.outputFile as string);
 
@@ -83,7 +83,7 @@ async function run(cli: meow.Result<CLIFlagTypes>) {
 
         const diag = await compiler.compile(sourceDir);
 
-        log.debug(diag, Object.keys(compiler.output()));
+        log.debug('Compilation complete, diagnostics: ', diag);
     } catch (error) {
         log.error('Compilation was unsuccessful');
         throw error;
@@ -91,4 +91,4 @@ async function run(cli: meow.Result<CLIFlagTypes>) {
 }
 
 // eslint-disable-next-line
-run(cli).catch(err => (console.error(err), process.exitCode = 1));
+run(CLIResult).catch(err => (console.error(err), process.exitCode = 1));
