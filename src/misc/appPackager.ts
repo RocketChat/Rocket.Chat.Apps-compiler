@@ -2,7 +2,7 @@ import * as path from 'path';
 
 import * as fs from 'fs-extra';
 import * as Yazl from 'yazl';
-import { Glob, IOptions } from 'glob';
+import glob, { IOptions } from 'glob';
 
 import { FolderDetails } from './folderDetails';
 import { IFiles } from '../definition/IFiles';
@@ -89,7 +89,7 @@ export class AppPackager {
     // tslint:disable-next-line:promise-function-async
     private asyncGlob(): Promise<Array<string>> {
         return new Promise((resolve, reject) => {
-            new Glob(this.fd.toZip, AppPackager.GlobOptions, (err, matches) => {
+            glob(this.fd.toZip, AppPackager.GlobOptions, (err, matches) => {
                 if (err) {
                     reject(err);
                     return;
