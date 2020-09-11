@@ -191,9 +191,9 @@ export class AppsCompiler implements IAppsCompiler {
 
                 if (diagnostic.file) {
                     const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
-                    console.log(`Error ${ diagnostic.file.fileName } (${ line + 1 },${ character + 1 }): ${ message }`);
+                    console.error(`Error ${ diagnostic.file.fileName } (${ line + 1 },${ character + 1 }): ${ message }`);
                 } else {
-                    console.log(`Error: ${ message }`);
+                    console.error(`Error: ${ message }`);
                 }
             });
         }
@@ -213,6 +213,11 @@ export class AppsCompiler implements IAppsCompiler {
                 console.log('Emitting failed for:', file.name);
                 logErrors(file.name);
             }
+
+            file.name = key.replace(/\.ts/g, '.js');
+
+            delete result.files[key];
+            result.files[file.name] = file;
 
             file.compiled = output.outputFiles[0].text;
         });
