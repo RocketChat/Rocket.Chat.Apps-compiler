@@ -4,11 +4,12 @@ import { AppsCompiler } from '../src/AppsCompiler';
 
 function getPath() {
     const dir = process.argv[2];
-    const resolved = normalize(join(__dirname, dir));
+    const resolved = normalize(join(process.cwd(), dir));
     return resolved;
 }
 
 (async () => {
     const compiler = new AppsCompiler();
-    compiler.compile(getPath());
+    await compiler.compile(getPath());
+    await compiler.outputZip('./testing.zip');
 })();
