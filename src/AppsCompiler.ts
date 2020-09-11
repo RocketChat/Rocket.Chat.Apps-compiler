@@ -82,7 +82,7 @@ export class AppsCompiler implements IAppsCompiler {
             return;
         }
 
-        const packager = new AppPackager(fd, this.compiled, outputPath);
+        const packager = new AppPackager(fd, this, outputPath);
         const readFile = promisify(fs.readFile);
         return readFile(await packager.zipItUp());
     }
