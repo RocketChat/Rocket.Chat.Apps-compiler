@@ -12,8 +12,6 @@
         "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' ./index.ts",
         "dev:debug": "nodemon --watch 'src/**/*.ts' --exec node -r ts-node/register --inspect --inspect=0.0.0.0:9229 ./index.ts ",
         "compile": "node -r ts-node/register bin/compile.ts",
-        "compile:dev": "node -r ts-node/register ./custom-scripts/compile.ts",
-        "compile:debug": "node -r ts-node/register --inspect ./custom-scripts/compile.ts"
     },
     "repository": {
         "type": "git",
