@@ -1,11 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import fallbackTypescript, {
+import * as fallbackTypescript from 'typescript';
+import {
     CompilerOptions, Diagnostic, EmitOutput, HeritageClause, LanguageServiceHost, ModuleResolutionHost, ResolvedModule, SourceFile
 } from 'typescript';
 import { promisify } from 'util';
 
-import { getAppSource } from './compiler/getAppSouce';
+import { getAppSource } from './compiler/getAppSource';
 import { IAppsCompiler, IAppSource, ICompilerFile, ICompilerResult, IMapCompilerFile } from './definition';
 import { IFiles } from './definition/IFiles';
 import { Utilities } from './misc/Utilities';
@@ -51,7 +52,7 @@ export class AppsCompiler implements IAppsCompiler {
 
         try {
             const source = await getAppSource(path);
-            const { files, implemented, diagnostics } = this.toJs(source, path);
+            const { files, implemented, diagnostics } = this.toJs(source);
 
             this.compiled = Object.entries(files)
                 .map(([, { name, compiled }]) => ({ [name]: compiled }))
@@ -81,12 +82,12 @@ export class AppsCompiler implements IAppsCompiler {
             return;
         }
 
-        const packager = new AppPackager(fd, this.compiled, outputPath);
+        const packager = new AppPackager(fd, this, outputPath);
         const readFile = promisify(fs.readFile);
         return readFile(await packager.zipItUp());
     }
 
-    private toJs({ appInfo, files }: IAppSource, appPath: string): ICompilerResult {
+    private toJs({ appInfo, sourceFiles: files }: IAppSource): ICompilerResult {
         if (!appInfo.classFile || !files[appInfo.classFile] || !this.isValidFile(files[appInfo.classFile])) {
             throw new Error(`Invalid App package. Could not find the classFile (${ appInfo.classFile }) file.`);
         }
@@ -121,7 +122,7 @@ export class AppsCompiler implements IAppsCompiler {
                 return this.ts.ScriptSnapshot.fromString(file.content);
             },
             getCompilationSettings: () => this.compilerOptions,
-            getCurrentDirectory: () => appPath,
+            getCurrentDirectory: () => this.wd,
             getDefaultLibFileName: () => this.ts.getDefaultLibFilePath(this.compilerOptions),
             fileExists: (fileName: string): boolean => this.ts.sys.fileExists(fileName),
             readFile: (fileName: string): string | undefined => this.ts.sys.readFile(fileName),
@@ -132,7 +133,7 @@ export class AppsCompiler implements IAppsCompiler {
                 };
 
                 for (const moduleName of moduleNames) {
-                    this.resolver(moduleName, resolvedModules, containingFile, result, appPath, moduleResHost);
+                    this.resolver(moduleName, resolvedModules, containingFile, result, this.wd, moduleResHost);
                 }
 
                 // @TODO deal with this later
@@ -190,14 +191,19 @@ export class AppsCompiler implements IAppsCompiler {
 
                 if (diagnostic.file) {
                     const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
-                    console.log(`Error ${ diagnostic.file.fileName } (${ line + 1 },${ character + 1 }): ${ message }`);
+                    console.error(`Error ${ diagnostic.file.fileName } (${ line + 1 },${ character + 1 }): ${ message }`);
                 } else {
-                    console.log(`Error: ${ message }`);
+                    console.error(`Error: ${ message }`);
                 }
             });
         }
 
-        result.diagnostics = this.ts.getPreEmitDiagnostics(languageService.getProgram());
+        // TypeScript alerted for `readonly` value from `getPreEmitDiagnostics` being assigned to the mutable `result.diagnostics`
+        Object.defineProperty(result, 'diagnostics', {
+            value: this.ts.getPreEmitDiagnostics(languageService.getProgram()),
+            configurable: false,
+            writable: false,
+        });
 
         Object.keys(result.files).forEach((key) => {
             const file: ICompilerFile = result.files[key];
@@ -207,6 +213,11 @@ export class AppsCompiler implements IAppsCompiler {
                 console.log('Emitting failed for:', file.name);
                 logErrors(file.name);
             }
+
+            file.name = key.replace(/\.ts/g, '.js');
+
+            delete result.files[key];
+            result.files[file.name] = file;
 
             file.compiled = output.outputFiles[0].text;
         });

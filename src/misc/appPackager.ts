@@ -3,10 +3,11 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as Yazl from 'yazl';
 import glob, { IOptions } from 'glob';
+import { AppInterface } from '@rocket.chat/apps-engine/definition/metadata';
 
 import { FolderDetails } from './folderDetails';
-import { IFiles } from '../definition/IFiles';
 import packageInfo from '../../package.json';
+import { AppsCompiler } from '../AppsCompiler';
 
 export class AppPackager {
     public static GlobOptions: IOptions = {
@@ -32,16 +33,18 @@ export class AppPackager {
 
     private zip: Yazl.ZipFile = new Yazl.ZipFile();
 
-    constructor(private fd: FolderDetails, private compiledFiles: IFiles, private outputFilename: string) {}
+    constructor(private fd: FolderDetails, private compiledApp: AppsCompiler, private outputFilename: string) {}
 
     public async zipItUp(): Promise<string> {
         const zipName = this.outputFilename;
 
         this.zip.addBuffer(Buffer.from(JSON.stringify(AppPackager.PackagerInfo)), '.packagedby', { compress: true });
 
-        this.zipFromCompiledSource(this.compiledFiles);
+        this.overwriteAppManifest();
 
-        await this.zipSupportFiles(this.fd);
+        this.zipFromCompiledSource();
+
+        await this.zipSupportFiles();
 
         this.zip.end();
 
@@ -50,7 +53,14 @@ export class AppPackager {
         return zipName;
     }
 
-    private async zipSupportFiles(fd: FolderDetails): Promise<void> {
+    private overwriteAppManifest(): void {
+        this.fd.info.implements = this.compiledApp.getImplemented()
+            .filter((interfaceName) => !!AppInterface[interfaceName as AppInterface]) as Array<AppInterface>;
+
+        fs.writeFileSync(this.fd.infoFile, JSON.stringify(this.fd.info, null, 4));
+    }
+
+    private async zipSupportFiles(): Promise<void> {
         let matches;
 
         try {
@@ -67,7 +77,7 @@ export class AppPackager {
 
         await Promise.all(
             matches.map(async (realPath) => {
-                const zipPath = path.relative(fd.folder, realPath);
+                const zipPath = path.relative(this.fd.folder, realPath);
 
                 const fileStat = await fs.stat(realPath);
 
@@ -81,9 +91,9 @@ export class AppPackager {
             }));
     }
 
-    private zipFromCompiledSource(compiledFiles: IFiles): void {
-        Object.keys(compiledFiles)
-            .map((fileName) => this.zip.addBuffer(Buffer.from(compiledFiles[fileName]), fileName, { compress: true }));
+    private zipFromCompiledSource(): void {
+        Object.entries(this.compiledApp.output())
+            .map(([filename, contents]) => this.zip.addBuffer(Buffer.from(contents), filename, { compress: true }));
     }
 
     // tslint:disable-next-line:promise-function-async

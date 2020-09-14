@@ -54,13 +54,13 @@ export class FolderDetails {
         }
 
         try {
-            this.info = await import(this.infoFile);
+            this.info = JSON.parse(fs.readFileSync(this.infoFile, { encoding: 'utf-8' }));
         } catch (e) {
             throw new Error('The "app.json" file is invalid.');
         }
 
         // This errors out if it fails
-        this.validateAppDotJson();
+        this.validateAppManifest();
 
         if (!this.info.classFile) {
             throw new Error('Invalid "app.json" file. The "classFile" is required.');
@@ -73,7 +73,7 @@ export class FolderDetails {
         }
     }
 
-    private validateAppDotJson(): void {
+    private validateAppManifest(): void {
         const result = tv4.validateMultiple(this.info, appJsonSchema);
 
         // We only care if the result is invalid, as it should pass successfully

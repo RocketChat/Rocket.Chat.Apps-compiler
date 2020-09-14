@@ -3,5 +3,5 @@ import { IAppInfo } from './IAppInfo';
 
 export interface IAppSource {
     appInfo: IAppInfo;
-    files: { [filename: string]: ICompilerFile };
+    sourceFiles: { [filename: string]: ICompilerFile };
 }
