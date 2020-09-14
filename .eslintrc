@@ -50,9 +50,16 @@
             "rules": {
                 "@typescript-eslint/ban-ts-ignore": "off",
                 "@typescript-eslint/no-explicit-any": "off",
+                "@typescript-eslint/no-empty-function": "off",
                 "indent": ["error", 4],
                 "no-useless-constructor": "off",
-                "no-empty-function": "off"
+                "no-empty-function": "off",
+                "import/order": ["error", {
+                    "groups": [["builtin", "external"], "internal"]
+                }],
+                "no-return-assign": "off",
+                "no-nested-ternary": "off",
+                "curly": "off"
             },
             "env": {
                 "commonjs": true,

@@ -1,9 +1,7 @@
-import { IAppSource } from './IAppSource';
-import { ICompilerResult } from './ICompilerResult';
+import { Diagnostic } from 'typescript';
 
 export interface IAppsCompiler {
-    /**
-     * Compile an Rocket.Chat app into Javascript.
-     */
-    toJs({ classFile, files }: IAppSource): ICompilerResult;
+    compile(path: string): Promise<Diagnostic[]>;
+    outputZip(outputPath: string): Promise<Buffer>;
+    output(): { [filename: string]: string };
 }

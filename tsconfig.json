@@ -1,16 +1,18 @@
 {
     "compileOnSave": false,
     "compilerOptions": {
-        "sourceMap": true,
-        "target": "es6",
+        "sourceMap": false,
+        "target": "esnext",
         "module": "commonjs",
         "declaration": true,
         "noImplicitAny": true,
         "noUnusedLocals": true,
         "removeComments": false,
+        "resolveJsonModule": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "moduleResolution": "node",
+        "esModuleInterop": true,
         "types": [
             "node"
         ],
@@ -21,11 +23,7 @@
         "outDir": "./dist"
     },
     "exclude": [
-        "node_modules",
-        "server",
-        "client",
-        "src/definition",
-        "examples"
+        "node_modules"
     ],
     "include": [
         "src"
