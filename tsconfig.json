@@ -1,0 +1,34 @@
+{
+    "compileOnSave": false,
+    "compilerOptions": {
+        "sourceMap": false,
+        "target": "esnext",
+        "module": "commonjs",
+        "declaration": true,
+        "noImplicitAny": true,
+        "noUnusedLocals": true,
+        "removeComments": false,
+        "resolveJsonModule": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "types": [
+            "node"
+        ],
+        "lib": [
+            "es2017",
+            "dom"
+        ],
+        "outDir": "./dist"
+    },
+    "exclude": [
+        "node_modules"
+    ],
+    "include": [
+        "src"
+    ],
+    "atom": {
+        "rewriteTsconfig": false
+    }
+}
