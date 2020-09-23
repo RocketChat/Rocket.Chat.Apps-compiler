@@ -7,8 +7,7 @@ import path from 'path';
 import * as TS from 'typescript';
 
 import { AppsCompiler } from '.';
-import { CompilerError } from './definition/CompilerError';
-import { ICompilerResult } from './definition';
+import { CompilerFileNotFoundError, ICompilerResult } from './definition';
 
 const { promises: fs, constants: { R_OK: READ_ACCESS } } = require('fs');
 
@@ -32,7 +31,7 @@ export async function compile(sourceDir: string, outputFile: string): Promise<IC
         await fs.access(sourceAppManifest, READ_ACCESS);
     } catch (error) {
         log.error(`Can't read app's manifest in "${ sourceAppManifest }". Are you sure there is an app there?`);
-        throw error;
+        throw new CompilerFileNotFoundError(sourceAppManifest);
     }
 
     const appRequire = createRequire(sourceAppManifest);
@@ -57,7 +56,7 @@ export async function compile(sourceDir: string, outputFile: string): Promise<IC
         const result = await compiler.compile(sourceDir);
 
         if (result.diagnostics.length) {
-            throw new CompilerError(result.diagnostics);
+            return result;
         }
 
         log.debug('Compilation complete, inspection \n', inspect(result));
@@ -65,7 +64,7 @@ export async function compile(sourceDir: string, outputFile: string): Promise<IC
 
         await compiler.outputZip(outputFile);
 
-        log.info(`Compilation successful! Took ${result.duration / 1000}s. Package saved at `, outputFile);
+        log.info(`Compilation successful! Took ${ result.duration / 1000 }s. Package saved at `, outputFile);
 
         return result;
     } catch (error) {
