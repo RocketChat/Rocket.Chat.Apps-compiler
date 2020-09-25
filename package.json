@@ -7,11 +7,10 @@
     "scripts": {
         "test": "mocha -r ts-node/register './tests/**/*.spec.ts'",
         "test:watch": "mocha --require ts-node/register --watch --watch-files src, 'tests/**/*.ts'",
-        "build": "tsc",
+        "build": "mkdir dist && cp package.json dist/package.json && tsc",
         "lint": "npx eslint src/**/*.ts",
         "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' ./index.ts",
-        "dev:debug": "nodemon --watch 'src/**/*.ts' --exec node -r ts-node/register --inspect --inspect=0.0.0.0:9229 ./index.ts ",
-        "compile": "node -r ts-node/register bin/compile.ts"
+        "dev:debug": "nodemon --watch 'src/**/*.ts' --exec node -r ts-node/register --inspect --inspect=0.0.0.0:9229 ./index.ts "
     },
     "repository": {
         "type": "git",
@@ -44,7 +43,6 @@
         "chai": "^4.2.0",
         "eslint": "^7.9.0",
         "husky": "^4.2.5",
-        "meow": "^7.1.1",
         "mocha": "^8.0.1",
         "nodemon": "^2.0.4",
         "ts-node": "^8.10.2"
