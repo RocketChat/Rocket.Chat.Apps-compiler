@@ -2,7 +2,7 @@
     "compilerOptions": {
         /* Basic Options */
         "target": "ESNext",
-        "module": "commonjs",
+        "module": "CommonJS",
         "allowJs": false,
         "checkJs": false,
         "skipLibCheck": true,
@@ -21,6 +21,7 @@
     },
     "exclude": [
         "node_modules",
-        "./tests"
+        "./tests",
+        "dist"
     ]
 }
