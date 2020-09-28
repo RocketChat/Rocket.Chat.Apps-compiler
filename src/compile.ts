@@ -7,7 +7,7 @@ import path from 'path';
 import * as TS from 'typescript';
 
 import { AppsCompiler } from '.';
-import { CompilerFileNotFoundError, ICompilerResult } from './definition';
+import { CompilerFileNotFoundError, ICompilerDescriptor, ICompilerResult } from './definition';
 
 const { promises: fs, constants: { R_OK: READ_ACCESS } } = require('fs');
 
@@ -17,7 +17,7 @@ const log = require('simple-node-logger').createSimpleLogger({
 
 log.setLevel(process.env.LOG_LEVEL || 'info');
 
-export async function compile(sourceDir: string, outputFile: string): Promise<ICompilerResult> {
+export async function compile(compilerDesc: ICompilerDescriptor, sourceDir: string, outputFile: string): Promise<ICompilerResult> {
     sourceDir = path.resolve(sourceDir);
     outputFile = path.resolve(outputFile);
 
@@ -38,10 +38,10 @@ export async function compile(sourceDir: string, outputFile: string): Promise<IC
 
     log.debug('Created require function for the app\'s folder scope');
 
-    let appTs: typeof TS;
+    let appTs: typeof TS | undefined;
 
     try {
-        appTs = appRequire('typescript');
+        appTs = appRequire('typescript') as typeof TS;
 
         log.debug(`Using TypeScript ${ appTs.version } as specified in app's dependencies`);
     } catch {
@@ -49,7 +49,7 @@ export async function compile(sourceDir: string, outputFile: string): Promise<IC
     }
 
     try {
-        const compiler = new AppsCompiler(appTs);
+        const compiler = new AppsCompiler(compilerDesc, appTs);
 
         log.debug('Starting compilation...');
 

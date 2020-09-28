@@ -2,13 +2,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as fallbackTypescript from 'typescript';
 import {
-    CompilerOptions, Diagnostic, EmitOutput, HeritageClause, LanguageServiceHost, ModuleResolutionHost, ResolvedModule, SourceFile
+    CompilerOptions, Diagnostic, EmitOutput,
+    HeritageClause, LanguageServiceHost,
+    ModuleResolutionHost, ResolvedModule, SourceFile,
 } from 'typescript';
 import { promisify } from 'util';
 
 import { getAppSource } from './compiler/getAppSource';
-import { IAppSource, ICompilerFile, ICompilerResult, IMapCompilerFile } from './definition';
-import { IFiles } from './definition/IFiles';
+import { IAppSource, ICompilerDescriptor, ICompilerFile, ICompilerResult, IMapCompilerFile, IFiles } from './definition';
 import { Utilities } from './misc/Utilities';
 import { FolderDetails } from './misc/folderDetails';
 import { AppPackager } from './misc/appPackager';
@@ -28,6 +29,7 @@ export class AppsCompiler {
     private wd: string;
 
     constructor(
+        private readonly compilerDesc: ICompilerDescriptor,
         private readonly ts: TypeScript = fallbackTypescript,
     ) {
         this.compilerOptions = {
@@ -82,7 +84,7 @@ export class AppsCompiler {
             return;
         }
 
-        const packager = new AppPackager(fd, this, outputPath);
+        const packager = new AppPackager(this.compilerDesc, fd, this, outputPath);
         const readFile = promisify(fs.readFile);
         return readFile(await packager.zipItUp());
     }
@@ -230,8 +232,8 @@ export class AppsCompiler {
                     line,
                     character,
                     lineText: diag.file.getText().substring(lineStart, diag.file.getLineEndOfPosition(lineStart)),
-                    message: `Error ${ diag.file.fileName } (${ line + 1 },${ character + 1 }): ${ message }`
-                })
+                    message: `Error ${ diag.file.fileName } (${ line + 1 },${ character + 1 }): ${ message }`,
+                });
             }
 
             return norm;

@@ -6,8 +6,8 @@ import glob, { IOptions } from 'glob';
 import { AppInterface } from '@rocket.chat/apps-engine/definition/metadata';
 
 import { FolderDetails } from './folderDetails';
-import packageInfo from '../../package.json';
 import { AppsCompiler } from '../AppsCompiler';
+import { ICompilerDescriptor } from '../definition';
 
 export class AppPackager {
     public static GlobOptions: IOptions = {
@@ -26,19 +26,14 @@ export class AppPackager {
         ],
     };
 
-    public static PackagerInfo: { [key: string]: string } = {
-        tool: packageInfo.name,
-        version: packageInfo.version,
-    };
-
     private zip: Yazl.ZipFile = new Yazl.ZipFile();
 
-    constructor(private fd: FolderDetails, private compiledApp: AppsCompiler, private outputFilename: string) {}
+    constructor(private readonly compilerDesc: ICompilerDescriptor, private fd: FolderDetails, private compiledApp: AppsCompiler, private outputFilename: string) { }
 
     public async zipItUp(): Promise<string> {
         const zipName = this.outputFilename;
 
-        this.zip.addBuffer(Buffer.from(JSON.stringify(AppPackager.PackagerInfo)), '.packagedby', { compress: true });
+        this.zip.addBuffer(Buffer.from(JSON.stringify(this.compilerDesc)), '.packagedby', { compress: true });
 
         this.overwriteAppManifest();
 
