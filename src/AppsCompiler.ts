@@ -2,20 +2,22 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as fallbackTypescript from 'typescript';
 import {
-    CompilerOptions, Diagnostic, EmitOutput, HeritageClause, LanguageServiceHost, ModuleResolutionHost, ResolvedModule, SourceFile
+    CompilerOptions, Diagnostic, EmitOutput,
+    HeritageClause, LanguageServiceHost,
+    ModuleResolutionHost, ResolvedModule, SourceFile,
 } from 'typescript';
 import { promisify } from 'util';
 
 import { getAppSource } from './compiler/getAppSource';
-import { IAppsCompiler, IAppSource, ICompilerFile, ICompilerResult, IMapCompilerFile } from './definition';
-import { IFiles } from './definition/IFiles';
+import { IAppSource, ICompilerDescriptor, ICompilerFile, ICompilerResult, IMapCompilerFile, IFiles } from './definition';
 import { Utilities } from './misc/Utilities';
 import { FolderDetails } from './misc/folderDetails';
 import { AppPackager } from './misc/appPackager';
+import { ICompilerDiagnostic } from './definition/ICompilerDiagnostic';
 
 type TypeScript = typeof fallbackTypescript;
 
-export class AppsCompiler implements IAppsCompiler {
+export class AppsCompiler {
     private readonly compilerOptions: CompilerOptions;
 
     private libraryFiles: IMapCompilerFile;
@@ -27,6 +29,7 @@ export class AppsCompiler implements IAppsCompiler {
     private wd: string;
 
     constructor(
+        private readonly compilerDesc: ICompilerDescriptor,
         private readonly ts: TypeScript = fallbackTypescript,
     ) {
         this.compilerOptions = {
@@ -47,21 +50,20 @@ export class AppsCompiler implements IAppsCompiler {
         this.libraryFiles = {};
     }
 
-    public async compile(path: string): Promise<Diagnostic[]> {
+    public async compile(path: string): Promise<ICompilerResult> {
         this.wd = path;
 
-        try {
-            const source = await getAppSource(path);
-            const { files, implemented, diagnostics } = this.toJs(source);
+        const source = await getAppSource(path);
+        const compilerResult = this.toJs(source);
+        const { files, implemented } = compilerResult;
 
-            this.compiled = Object.entries(files)
-                .map(([, { name, compiled }]) => ({ [name]: compiled }))
-                .reduce((acc, cur) => Object.assign(acc, cur), {});
-            this.implemented = implemented;
-            return diagnostics;
-        } catch (err) {
-            console.warn(err);
-        }
+        this.compiled = Object.entries(files)
+            .map(([, { name, compiled }]) => ({ [name]: compiled }))
+            .reduce((acc, cur) => Object.assign(acc, cur), {});
+
+        this.implemented = implemented;
+
+        return compilerResult;
     }
 
     public output(): IFiles {
@@ -82,7 +84,7 @@ export class AppsCompiler implements IAppsCompiler {
             return;
         }
 
-        const packager = new AppPackager(fd, this, outputPath);
+        const packager = new AppPackager(this.compilerDesc, fd, this, outputPath);
         const readFile = promisify(fs.readFile);
         return readFile(await packager.zipItUp());
     }
@@ -92,7 +94,9 @@ export class AppsCompiler implements IAppsCompiler {
             throw new Error(`Invalid App package. Could not find the classFile (${ appInfo.classFile }) file.`);
         }
 
-        const result: ICompilerResult = { files, implemented: [], diagnostics: [] };
+        const startTime = Date.now();
+
+        const result: ICompilerResult = { files, implemented: [], diagnostics: [], duration: NaN };
 
         // Verify all file names are normalized
         // and that the files are valid
@@ -181,26 +185,8 @@ export class AppsCompiler implements IAppsCompiler {
             });
         });
 
-        function logErrors(fileName: string) {
-            const allDiagnostics = languageService.getCompilerOptionsDiagnostics()
-                .concat(languageService.getSyntacticDiagnostics(fileName))
-                .concat(languageService.getSemanticDiagnostics(fileName));
-
-            allDiagnostics.forEach((diagnostic) => {
-                const message = this.ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
-
-                if (diagnostic.file) {
-                    const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
-                    console.error(`Error ${ diagnostic.file.fileName } (${ line + 1 },${ character + 1 }): ${ message }`);
-                } else {
-                    console.error(`Error: ${ message }`);
-                }
-            });
-        }
-
-        // TypeScript alerted for `readonly` value from `getPreEmitDiagnostics` being assigned to the mutable `result.diagnostics`
         Object.defineProperty(result, 'diagnostics', {
-            value: this.ts.getPreEmitDiagnostics(languageService.getProgram()),
+            value: this.normalizeDiagnostics(this.ts.getPreEmitDiagnostics(languageService.getProgram())),
             configurable: false,
             writable: false,
         });
@@ -208,11 +194,6 @@ export class AppsCompiler implements IAppsCompiler {
         Object.keys(result.files).forEach((key) => {
             const file: ICompilerFile = result.files[key];
             const output: EmitOutput = languageService.getEmitOutput(file.name);
-
-            if (output.emitSkipped) {
-                console.log('Emitting failed for:', file.name);
-                logErrors(file.name);
-            }
 
             file.name = key.replace(/\.ts/g, '.js');
 
@@ -222,7 +203,41 @@ export class AppsCompiler implements IAppsCompiler {
             file.compiled = output.outputFiles[0].text;
         });
 
+        result.duration = Date.now() - startTime;
+
         return result;
+    }
+
+    private normalizeDiagnostics(diagnostics: Array<Diagnostic>): Array<ICompilerDiagnostic> {
+        return diagnostics.map((diag) => {
+            const message = this.ts.flattenDiagnosticMessageText(diag.messageText, '\n');
+
+            const norm: ICompilerDiagnostic = {
+                originalDiagnostic: diag,
+                originalMessage: message,
+                message,
+            };
+
+            // Let's make the object more "loggable"
+            Object.defineProperties(norm, {
+                originalMessage: { enumerable: false },
+                originalDiagnostic: { enumerable: false },
+            });
+
+            if (diag.file) {
+                const { line, character } = diag.file.getLineAndCharacterOfPosition(diag.start);
+                const lineStart = diag.file.getPositionOfLineAndCharacter(line, 0);
+
+                Object.assign(norm, {
+                    line,
+                    character,
+                    lineText: diag.file.getText().substring(lineStart, diag.file.getLineEndOfPosition(lineStart)),
+                    message: `Error ${ diag.file.fileName } (${ line + 1 },${ character + 1 }): ${ message }`,
+                });
+            }
+
+            return norm;
+        });
     }
 
     public resolvePath(containingFile: string, moduleName: string, cwd: string): string {

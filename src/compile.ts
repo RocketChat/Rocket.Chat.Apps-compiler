@@ -1,53 +1,25 @@
-#!/usr/bin/env node
-
 /* eslint-disable @typescript-eslint/no-var-requires */
 
-'use strict';
-
 import { createRequire } from 'module';
+import { inspect } from 'util';
 import path from 'path';
 
-import meow from 'meow';
 import * as TS from 'typescript';
 
-import { AppsCompiler } from '../src';
+import { AppsCompiler } from '.';
+import { CompilerFileNotFoundError, ICompilerDescriptor, ICompilerResult } from './definition';
 
 const { promises: fs, constants: { R_OK: READ_ACCESS } } = require('fs');
-
 
 const log = require('simple-node-logger').createSimpleLogger({
     timestampFormat: 'YYYY-MM-DD HH:mm:ss.SSS',
 });
 
-type CLIFlagTypes = {
-    sourceDir: meow.StringFlag,
-    outputFile: meow.StringFlag,
-};
-
-const CLIResult = meow<CLIFlagTypes>(`
-USAGE
-    $ compile -s [path/to/source/app] -o [path/to/output/file]
-`,
-{
-    flags: {
-        outputFile: {
-            type: 'string',
-            alias: 'o',
-            isRequired: true,
-        },
-        sourceDir: {
-            type: 'string',
-            alias: 's',
-            isRequired: true,
-        },
-    },
-});
-
 log.setLevel(process.env.LOG_LEVEL || 'info');
 
-async function run(cli: typeof CLIResult) {
-    const sourceDir = path.resolve(cli.flags.sourceDir as string);
-    const outputFile = path.resolve(cli.flags.outputFile as string);
+export async function compile(compilerDesc: ICompilerDescriptor, sourceDir: string, outputFile: string): Promise<ICompilerResult> {
+    sourceDir = path.resolve(sourceDir);
+    outputFile = path.resolve(outputFile);
 
     log.info('Compiling app at ', sourceDir);
 
@@ -59,17 +31,17 @@ async function run(cli: typeof CLIResult) {
         await fs.access(sourceAppManifest, READ_ACCESS);
     } catch (error) {
         log.error(`Can't read app's manifest in "${ sourceAppManifest }". Are you sure there is an app there?`);
-        throw error;
+        throw new CompilerFileNotFoundError(sourceAppManifest);
     }
 
     const appRequire = createRequire(sourceAppManifest);
 
     log.debug('Created require function for the app\'s folder scope');
 
-    let appTs: typeof TS;
+    let appTs: typeof TS | undefined;
 
     try {
-        appTs = appRequire('typescript');
+        appTs = appRequire('typescript') as typeof TS;
 
         log.debug(`Using TypeScript ${ appTs.version } as specified in app's dependencies`);
     } catch {
@@ -77,23 +49,27 @@ async function run(cli: typeof CLIResult) {
     }
 
     try {
-        const compiler = new AppsCompiler(appTs);
+        const compiler = new AppsCompiler(compilerDesc, appTs);
 
         log.debug('Starting compilation...');
 
-        const diag = await compiler.compile(sourceDir);
+        const result = await compiler.compile(sourceDir);
 
-        log.debug('Compilation complete, diagnostics: ', diag);
+        if (result.diagnostics.length) {
+            return result;
+        }
+
+        log.debug('Compilation complete, inspection \n', inspect(result));
         log.debug('Starting packaging...');
 
         await compiler.outputZip(outputFile);
+
+        log.info(`Compilation successful! Took ${ result.duration / 1000 }s. Package saved at `, outputFile);
+
+        return result;
     } catch (error) {
         log.error('Compilation was unsuccessful');
+
         throw error;
     }
-
-    log.info('Compilation successful! Package saved at ', outputFile);
 }
-
-// eslint-disable-next-line
-run(CLIResult).catch(err => (console.error(err), process.exitCode = 1));

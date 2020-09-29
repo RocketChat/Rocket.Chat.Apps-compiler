@@ -1,34 +1,27 @@
 {
-    "compileOnSave": false,
     "compilerOptions": {
-        "sourceMap": false,
-        "target": "esnext",
-        "module": "commonjs",
+        /* Basic Options */
+        "target": "ESNext",
+        "module": "CommonJS",
+        "allowJs": false,
+        "checkJs": false,
+        "skipLibCheck": true,
         "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "outDir": "./dist",
+        "rootDir": "./src",
+        "removeComments": true,
         "noImplicitAny": true,
         "noUnusedLocals": true,
-        "removeComments": false,
-        "resolveJsonModule": true,
-        "emitDecoratorMetadata": true,
-        "experimentalDecorators": true,
         "moduleResolution": "node",
         "esModuleInterop": true,
-        "types": [
-            "node"
-        ],
-        "lib": [
-            "es2017",
-            "dom"
-        ],
-        "outDir": "./dist"
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true
     },
     "exclude": [
-        "node_modules"
-    ],
-    "include": [
-        "src"
-    ],
-    "atom": {
-        "rewriteTsconfig": false
-    }
+        "node_modules",
+        "./tests",
+        "dist"
+    ]
 }
