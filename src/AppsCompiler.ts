@@ -220,7 +220,6 @@ export class AppsCompiler {
 
             // Let's make the object more "loggable"
             Object.defineProperties(norm, {
-                originalMessage: { enumerable: false },
                 originalDiagnostic: { enumerable: false },
             });
 
@@ -229,6 +228,7 @@ export class AppsCompiler {
                 const lineStart = diag.file.getPositionOfLineAndCharacter(line, 0);
 
                 Object.assign(norm, {
+                    filename: diag.file.fileName,
                     line,
                     character,
                     lineText: diag.file.getText().substring(lineStart, diag.file.getLineEndOfPosition(lineStart)),
