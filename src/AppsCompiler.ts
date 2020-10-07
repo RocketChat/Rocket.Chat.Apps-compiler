@@ -229,6 +229,7 @@ export class AppsCompiler {
                 const lineStart = diag.file.getPositionOfLineAndCharacter(line, 0);
 
                 Object.assign(norm, {
+                    filename: diag.file.fileName,
                     line,
                     character,
                     lineText: diag.file.getText().substring(lineStart, diag.file.getLineEndOfPosition(lineStart)),
