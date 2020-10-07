@@ -220,7 +220,6 @@ export class AppsCompiler {
 
             // Let's make the object more "loggable"
             Object.defineProperties(norm, {
-                originalMessage: { enumerable: false },
                 originalDiagnostic: { enumerable: false },
             });
 
