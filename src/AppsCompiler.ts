@@ -96,7 +96,13 @@ export class AppsCompiler {
 
         const startTime = Date.now();
 
-        const result: ICompilerResult = { files, implemented: [], diagnostics: [], duration: NaN };
+        const result: ICompilerResult = {
+            files,
+            implemented: [],
+            diagnostics: [],
+            duration: NaN,
+            typeScriptVersion: this.ts.version,
+        };
 
         // Verify all file names are normalized
         // and that the files are valid
