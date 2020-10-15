@@ -6,7 +6,6 @@ import {
     HeritageClause, LanguageServiceHost,
     ModuleResolutionHost, ResolvedModule, SourceFile,
 } from 'typescript';
-import { promisify } from 'util';
 
 import { getAppSource } from './compiler/getAppSource';
 import { IAppSource, ICompilerDescriptor, ICompilerFile, ICompilerResult, IMapCompilerFile, IFiles } from './definition';
@@ -85,8 +84,7 @@ export class AppsCompiler {
         }
 
         const packager = new AppPackager(this.compilerDesc, fd, this, outputPath);
-        const readFile = promisify(fs.readFile);
-        return readFile(await packager.zipItUp());
+        return fs.promises.readFile(await packager.zipItUp());
     }
 
     private toJs({ appInfo, sourceFiles: files }: IAppSource): ICompilerResult {
@@ -101,6 +99,8 @@ export class AppsCompiler {
             implemented: [],
             diagnostics: [],
             duration: NaN,
+            name: appInfo.name,
+            version: appInfo.version,
             typeScriptVersion: this.ts.version,
         };
 

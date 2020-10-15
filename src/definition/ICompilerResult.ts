@@ -8,5 +8,7 @@ export interface ICompilerResult {
     implemented: Array<string>;
     diagnostics: Array<ICompilerDiagnostic>;
     duration: number;
+    name: string;
+    version: string;
     typeScriptVersion: string;
 }
