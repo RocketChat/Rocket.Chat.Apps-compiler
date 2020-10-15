@@ -2,14 +2,16 @@
     "name": "@rocket.chat/apps-compiler",
     "version": "0.0.1",
     "description": "The Rocket.Chat apps compiler",
-    "main": "dist/index.js",
+    "main": "index.js",
     "scripts": {
         "test": "mocha -r ts-node/register './tests/**/*.spec.ts'",
         "test:watch": "mocha --require ts-node/register --watch --watch-files src, 'tests/**/*.ts'",
         "build": "rm -rf dist && mkdir dist && cp package.json dist/package.json && tsc",
         "lint": "npx eslint src/**/*.ts",
         "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' ./index.ts",
-        "dev:debug": "nodemon --watch 'src/**/*.ts' --exec node -r ts-node/register --inspect --inspect=0.0.0.0:9229 ./index.ts "
+        "dev:debug": "nodemon --watch 'src/**/*.ts' --exec node -r ts-node/register --inspect --inspect=0.0.0.0:9229 ./index.ts",
+        "publish": "npm run build && cp LICENSE dist/LICENSE && cd dist && npm publish --access public",
+        "pack": "npm run build && cp LICENSE dist/LICENSE && cd dist && npm pack"
     },
     "repository": {
         "type": "git",
