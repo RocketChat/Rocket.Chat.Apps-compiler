@@ -1,11 +1,10 @@
 import { readdir, readFile } from 'fs';
 import { normalize, resolve } from 'path';
 import { promisify } from 'util';
-import { IAppSource } from '../definition';
+import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
 
-import { IAppInfo } from '../definition/IAppInfo';
-import { ICompilerFile } from '../definition/ICompilerFile';
-import { IMapCompilerFile } from '../definition/IMapCompilerFile';
+
+import { IAppSource, ICompilerFile, IMapCompilerFile } from '../definition';
 
 const readdirPromise = promisify(readdir);
 const readfilePromise = promisify(readFile);
@@ -68,8 +67,7 @@ function getAppInfo(projectFiles: ICompilerFile[]): IAppInfo {
     }
 
     try {
-        const { name, version, classFile } = JSON.parse(appJson.content);
-        return { name, version, classFile };
+        return JSON.parse(appJson.content) as IAppInfo;
     } catch (error) {
         throw new Error('app.json parsing fail');
     }

@@ -1,4 +1,3 @@
-import { IAppInfo } from './IAppInfo';
 import { IAppSource } from './IAppSource';
 import { ICompilerDescriptor } from './ICompilerDescriptor';
 import { ICompilerDiagnostic } from './ICompilerDiagnostic';
@@ -11,7 +10,6 @@ import { CompilerFileNotFoundError } from './CompilerFileNotFoundError';
 
 export {
     CompilerFileNotFoundError,
-    IAppInfo,
     IAppSource,
     ICompilerDescriptor,
     ICompilerDiagnostic,
