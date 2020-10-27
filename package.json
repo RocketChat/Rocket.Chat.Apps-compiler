@@ -1,6 +1,6 @@
 {
     "name": "@rocket.chat/apps-compiler",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "The Rocket.Chat apps compiler",
     "main": "index.js",
     "scripts": {
@@ -50,7 +50,7 @@
         "ts-node": "^8.10.2"
     },
     "dependencies": {
-        "@rocket.chat/apps-engine": "^1.18.0-alpha.3754",
+        "@rocket.chat/apps-engine": "^1.19.0-alpha.4006",
         "figures": "^3.0.0",
         "fs-extra": "^8.1.0",
         "glob": "^7.1.4",
