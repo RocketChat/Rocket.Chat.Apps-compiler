@@ -49,10 +49,12 @@ export class AppPackager {
     }
 
     private overwriteAppManifest(): void {
-        this.fd.info.implements = this.compiledApp.getImplemented()
-            .filter((interfaceName) => !!AppInterface[interfaceName as AppInterface]) as Array<AppInterface>;
+        const i = this.fd.info as any;
 
-        fs.writeFileSync(this.fd.infoFile, JSON.stringify(this.fd.info, null, 4));
+        i.implements = this.compiledApp.getImplemented().filter((interfaceName) => !!AppInterface[interfaceName as AppInterface]) as Array<AppInterface>;
+        this.fd.info = i;
+
+        fs.writeFileSync(this.fd.infoFile, JSON.stringify(i, null, 4));
     }
 
     private async zipSupportFiles(): Promise<void> {

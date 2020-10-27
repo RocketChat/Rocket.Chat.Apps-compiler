@@ -114,6 +114,7 @@ export class AppsCompiler {
             result.files[key].name = path.normalize(result.files[key].name);
         });
 
+        const modulesNotFound: ICompilerDiagnostic[] = [];
         const host = {
             getScriptFileNames: () => Object.keys(result.files),
             getScriptVersion: (fileName) => {
@@ -143,14 +144,19 @@ export class AppsCompiler {
                 };
 
                 for (const moduleName of moduleNames) {
-                    this.resolver(moduleName, resolvedModules, containingFile, result, this.wd, moduleResHost);
+                    const index = this.resolver(moduleName, resolvedModules, containingFile, result, this.wd, moduleResHost);
+                    if (index === -1) {
+                        modulesNotFound.push({
+                            filename: containingFile,
+                            line: 0,
+                            character: 0,
+                            lineText: '',
+                            message: `Failed to resolve module: ${ moduleName }`,
+                            originalMessage: `Module not found: ${ moduleName }`,
+                            originalDiagnostic: undefined,
+                        });
+                    }
                 }
-
-                // @TODO deal with this later
-                // if (moduleNames.length > resolvedModules.length) {
-                //     const failedCount = moduleNames.length - resolvedModules.length;
-                //     console.log(`Failed to resolved ${ failedCount } modules for ${ info.name } v${ info.version }!`);
-                // }
 
                 return resolvedModules;
             },
@@ -158,15 +164,24 @@ export class AppsCompiler {
 
         const languageService = this.ts.createLanguageService(host, this.ts.createDocumentRegistry());
 
-        const coDiag = languageService.getCompilerOptionsDiagnostics();
-        if (coDiag.length !== 0) {
-            console.log(coDiag);
+        try {
+            const coDiag = languageService.getCompilerOptionsDiagnostics();
+            if (coDiag.length !== 0) {
+                console.log(coDiag);
 
-            console.error('A VERY UNEXPECTED ERROR HAPPENED THAT SHOULD NOT!');
-            // console.error('Please report this error with a screenshot of the logs. ' +
-            //     `Also, please email a copy of the App being installed/updated: ${ info.name } v${ info.version } (${ info.id })`);
+                console.error('A VERY UNEXPECTED ERROR HAPPENED THAT SHOULD NOT!');
+                // console.error('Please report this error with a screenshot of the logs. ' +
+                //     `Also, please email a copy of the App being installed/updated: ${ info.name } v${ info.version } (${ info.id })`);
 
-            throw new Error(`Language Service's Compiler Options Diagnostics contains ${ coDiag.length } diagnostics.`);
+                throw new Error(`Language Service's Compiler Options Diagnostics contains ${ coDiag.length } diagnostics.`);
+            }
+        } catch (e) {
+            if (e.message === 'Debug Failure. False expression.') {
+                result.diagnostics = modulesNotFound;
+                result.duration = Date.now() - startTime;
+
+                return result;
+            }
         }
 
         const src = languageService.getProgram().getSourceFile(appInfo.classFile);
@@ -288,7 +303,7 @@ export class AppsCompiler {
             return resolvedModules.push(rs.resolvedModule);
         }
 
-        console.log(`Failed to resolve module: ${ moduleName }`);
+        return -1;
     }
 
     public getLibraryFile(fileName: string): ICompilerFile {
