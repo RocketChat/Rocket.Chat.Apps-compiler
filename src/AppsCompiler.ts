@@ -176,12 +176,14 @@ export class AppsCompiler {
                 throw new Error(`Language Service's Compiler Options Diagnostics contains ${ coDiag.length } diagnostics.`);
             }
         } catch (e) {
-            if (e.message === 'Debug Failure. False expression.') {
+            if (modulesNotFound.length !== 0) {
                 result.diagnostics = modulesNotFound;
                 result.duration = Date.now() - startTime;
 
                 return result;
             }
+
+            throw e;
         }
 
         const src = languageService.getProgram().getSourceFile(appInfo.classFile);
