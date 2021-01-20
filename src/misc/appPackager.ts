@@ -49,9 +49,7 @@ export class AppPackager {
     }
 
     private overwriteAppManifest(): void {
-        this.fd.info.implements = this.compiledApp.getImplemented()
-            .filter((interfaceName) => !!AppInterface[interfaceName as AppInterface]) as Array<AppInterface>;
-
+        this.fd.info.implements = this.compiledApp.getImplemented();
         fs.writeFileSync(this.fd.infoFile, JSON.stringify(this.fd.info, null, 4));
     }
 
