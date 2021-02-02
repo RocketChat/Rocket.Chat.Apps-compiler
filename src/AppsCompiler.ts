@@ -335,26 +335,31 @@ export class AppsCompiler {
     private checkInheritance(src: SourceFile): void {
         this.ts.forEachChild(src, (n) => {
             if (this.ts.isImportDeclaration(n)) {
-                try {
-                    const appsEngine = path.join(this.wd, 'node_modules/@rocket.chat/apps-engine/definition/App');
-                    const mainClassFile = path.join(this.wd, src.fileName);
+                const appsEngine = path.join(this.wd, 'node_modules/@rocket.chat/apps-engine/definition/App');
+                const mainClassFile = path.join(this.wd, src.fileName);
 
-                    Promise
-                        .all([import(appsEngine), import(mainClassFile)])
-                        .then(([{ App: EngineBaseApp }, mainClassModule]) => {
-                            const appName = src.fileName.replace(/\.ts$/, '');
-                            const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[appName];
-                            const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
-                            const mockLogger = { debug: () => { } };
-                            const realApp = new RealApp(mockInfo, mockLogger);
+                Promise.all([import(appsEngine), import(mainClassFile)])
+                    .then(([{ App: EngineBaseApp }, mainClassModule]) => {
+                        const appName = src.fileName.replace(/\.ts$/, '');
 
-                            if (!(realApp instanceof EngineBaseApp)) {
-                                throw new Error('App must extend apps-engine\'s "App" abstract class.');
-                            }
-                        });
-                } catch (err) {
-                    console.error(err, 'Try to run `npm install` in your app folder to fix it.');
-                }
+                        if (!mainClassModule.default || mainClassModule[appName]) {
+                            throw new Error(`There must be an exported class "${ appName }" in the main class file.`);
+                        }
+                        const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[appName];
+                        const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
+                        const mockLogger = { debug: () => { } };
+                        const realApp = new RealApp(mockInfo, mockLogger);
+
+                        if (!(realApp instanceof EngineBaseApp)) {
+                            throw new Error('App must extend apps-engine\'s "App" abstract class.'
+                                + 'Maybe you forgot to install dependencies? Try to run `npm install`'
+                                + 'in your app folder to fix it.',
+                            );
+                        }
+                    }).catch((err) => {
+                        console.error(err);
+                        process.exit(0);
+                    });
             }
         });
     }
