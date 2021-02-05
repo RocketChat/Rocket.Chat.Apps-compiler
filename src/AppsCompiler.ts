@@ -342,7 +342,7 @@ export class AppsCompiler {
                     .then(([{ App: EngineBaseApp }, mainClassModule]) => {
                         const appName = src.fileName.replace(/\.ts$/, '');
 
-                        if (!mainClassModule.default || mainClassModule[appName]) {
+                        if (!mainClassModule.default && !mainClassModule[appName]) {
                             throw new Error(`There must be an exported class "${ appName }" in the main class file.`);
                         }
                         const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[appName];
