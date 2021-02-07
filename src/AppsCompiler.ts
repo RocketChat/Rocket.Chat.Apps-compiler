@@ -352,8 +352,8 @@ export class AppsCompiler {
 
                         if (!(realApp instanceof EngineBaseApp)) {
                             throw new Error('App must extend apps-engine\'s "App" abstract class.'
-                                + 'Maybe you forgot to install dependencies? Try to run `npm install`'
-                                + 'in your app folder to fix it.',
+                                + ' Maybe you forgot to install dependencies? Try running `npm install`'
+                                + ' in your app folder to fix it.',
                             );
                         }
                     }).catch((err) => {
