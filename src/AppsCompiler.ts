@@ -197,7 +197,7 @@ export class AppsCompiler {
 
                     this.ts.forEachChild(node, (nn) => {
                         if (e.token === this.ts.SyntaxKind.ExtendsKeyword) {
-                            this.checkInheritance(src, nn.getText());
+                            this.checkInheritance(src);
                         } else if (e.token === this.ts.SyntaxKind.ImplementsKeyword) {
                             result.implemented.push(nn.getText());
                         } else {
@@ -332,57 +332,36 @@ export class AppsCompiler {
         return this.libraryFiles[norm];
     }
 
-    private checkInheritance(src: SourceFile, extendedSymbol: string): void {
-        const allImports: string[] = [];
-
+    private checkInheritance(src: SourceFile): void {
         this.ts.forEachChild(src, (n) => {
             if (this.ts.isImportDeclaration(n)) {
-                const renamings: Map<string, string> = new Map();
-                const imports = (n.importClause.namedBindings || n.importClause.name).getText()
-                    .replace(/[{|}]/g, '')
-                    .split(',')
-                    .map((identifier) => {
-                        const [exported, renamed] = identifier.split(' as ');
+                const appsEngine = path.join(this.wd, 'node_modules/@rocket.chat/apps-engine/definition/App');
+                const mainClassFile = path.join(this.wd, src.fileName);
 
-                        if (exported && renamed) {
-                            renamings.set(renamed.trim(), exported.trim());
+                Promise.all([import(appsEngine), import(mainClassFile)])
+                    .then(([{ App: EngineBaseApp }, mainClassModule]) => {
+                        const appName = src.fileName.replace(/\.ts$/, '');
+
+                        if (!mainClassModule.default && !mainClassModule[appName]) {
+                            throw new Error(`There must be an exported class "${ appName }" in the main class file.`);
                         }
-                        return identifier.replace(/^.*as/, '').trim();
+                        const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[appName];
+                        const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
+                        const mockLogger = { debug: () => { } };
+                        const realApp = new RealApp(mockInfo, mockLogger);
+
+                        if (!(realApp instanceof EngineBaseApp)) {
+                            throw new Error('App must extend apps-engine\'s "App" abstract class.'
+                                + ' Maybe you forgot to install dependencies? Try running `npm install`'
+                                + ' in your app folder to fix it.',
+                            );
+                        }
+                    }).catch((err) => {
+                        console.error(err);
+                        process.exit(0);
                     });
-                allImports.push(...imports);
-                if (imports.includes(extendedSymbol)) {
-                    try {
-                        const appsEngineAppPath = path.join(this.wd, 'node_modules/@rocket.chat/apps-engine/definition/App');
-                        const extendedAppShortPath = n.moduleSpecifier.getText().slice(1, -1);
-                        const extendedAppPath = path.isAbsolute(extendedAppShortPath) ? extendedAppShortPath // absolute path
-                            : extendedAppShortPath.startsWith('.')
-                                ? path.join(this.wd, extendedAppShortPath) // relative path
-                                : path.join(this.wd, 'node_modules', extendedAppShortPath); // external path (node_modules)
-                        const engine = import(appsEngineAppPath);
-                        const extendedApp = import(extendedAppPath);
-                        const importedSymbol = renamings.has(extendedSymbol) ? renamings.get(extendedSymbol) : extendedSymbol;
-
-                        extendedApp.then((App) => {
-                            engine.then((engine) => {
-                                const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
-                                const mockLogger = { debug: () => {} };
-                                const extendedApp = new App[importedSymbol](mockInfo, mockLogger);
-
-                                if (!(extendedApp instanceof engine.App)) {
-                                    throw new Error('App must extend apps-engine\'s "App" abstract class.');
-                                }
-                            }).catch(console.error);
-                        });
-                    } catch (err) {
-                        console.error(err, 'Try to run `npm install` in your app folder to fix it.');
-                    }
-                }
             }
         });
-
-        if (!allImports.includes(extendedSymbol)) {
-            throw new Error('App must extend apps-engine\'s "App" abstract class.');
-        }
     }
 
     private isValidFile(file: ICompilerFile): boolean {
