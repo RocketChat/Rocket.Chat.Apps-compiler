@@ -13,6 +13,7 @@ import { Utilities } from './misc/Utilities';
 import { FolderDetails } from './misc/folderDetails';
 import { AppPackager } from './misc/appPackager';
 import { ICompilerDiagnostic } from './definition/ICompilerDiagnostic';
+import { IPermission } from './definition/IPermission';
 
 type TypeScript = typeof fallbackTypescript;
 
@@ -56,6 +57,7 @@ export class AppsCompiler {
         const compilerResult = this.toJs(source);
         const { files, implemented } = compilerResult;
 
+        this.validateAppPermissionsSchema(source.appInfo.permissions);
         this.compiled = Object.entries(files)
             .map(([, { name, compiled }]) => ({ [name]: compiled }))
             .reduce((acc, cur) => Object.assign(acc, cur), {});
@@ -85,6 +87,28 @@ export class AppsCompiler {
 
         const packager = new AppPackager(this.compilerDesc, fd, this, outputPath);
         return fs.promises.readFile(await packager.zipItUp());
+    }
+
+    private validateAppPermissionsSchema(permissions: Array<IPermission>): void {
+        const examplePermissions = [{ name: 'user.read' }, { name: 'upload.write' }];
+        const error = new Error('Permissions declared in the app.json doesn\'t match the schema. '
+            + `It shoud be an peemissions array. e.g. ${ JSON.stringify(examplePermissions) }`);
+
+        if (!permissions) {
+            return;
+        }
+
+        if (!Array.isArray(permissions)) {
+            throw error;
+        }
+
+        if (permissions.length) {
+            permissions.forEach((permission) => {
+                if (!permission || !permission.name) {
+                    throw error;
+                }
+            });
+        }
     }
 
     private toJs({ appInfo, sourceFiles: files }: IAppSource): ICompilerResult {
