@@ -102,13 +102,11 @@ export class AppsCompiler {
             throw error;
         }
 
-        if (permissions.length) {
-            permissions.forEach((permission) => {
-                if (!permission || !permission.name) {
-                    throw error;
-                }
-            });
-        }
+        permissions.forEach((permission) => {
+            if (!permission || !permission.name) {
+                throw error;
+            }
+        });
     }
 
     private toJs({ appInfo, sourceFiles: files }: IAppSource): ICompilerResult {
