@@ -1,6 +1,6 @@
-import path from 'path';
+const path = require('path');
 
-import { compile } from '../src';
+const { compile } = require('../dist');
 
 const out = path.resolve(process.argv.pop());
 const source = path.resolve(process.argv.pop());
