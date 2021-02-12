@@ -21,7 +21,7 @@ async function walkDirectory(directory: string): Promise<ICompilerFile[]> {
                     return null;
                 }
 
-                if (dirent.isDirectory()) {
+                if (dirent.isDirectory() || dirent.isSymbolicLink()) {
                     return walkDirectory(res);
                 }
 
