@@ -55,10 +55,13 @@ export class AppsCompiler {
         this.wd = path;
 
         const source = await getAppSource(path);
+
+        // Pre compilation validations
+        this.validateAppPermissionsSchema(source.appInfo.permissions);
+
         const compilerResult = this.toJs(source);
         const { files, implemented } = compilerResult;
 
-        this.validateAppPermissionsSchema(source.appInfo.permissions);
         this.compiled = Object.entries(files)
             .map(([, { name, compiled }]) => ({ [name]: compiled }))
             .reduce((acc, cur) => Object.assign(acc, cur), {});
