@@ -371,7 +371,6 @@ export class AppsCompiler {
                 const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
                 const mockLogger = { debug: () => { } };
                 const realApp = new RealApp(mockInfo, mockLogger);
-                console.log(realApp, EngineBaseApp, realApp instanceof EngineBaseApp);
 
                 if (!(realApp instanceof EngineBaseApp)) {
                     throw new Error('App must extend apps-engine\'s "App" abstract class.'
