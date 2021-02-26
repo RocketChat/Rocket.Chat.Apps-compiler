@@ -223,8 +223,6 @@ export class AppsCompiler {
                     this.ts.forEachChild(node, (nn) => {
                         if (e.token === this.ts.SyntaxKind.ImplementsKeyword) {
                             result.implemented.push(nn.getText());
-                        } else {
-                            console.log(e.token, nn.getText());
                         }
                     });
                 }
