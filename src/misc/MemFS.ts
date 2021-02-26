@@ -67,7 +67,7 @@ export const MemFS = new class {
     }
 
     /**
-     * require a module from the memory file system
+     * require a module from files in the memory file system
      *
      * @param path the module's path
      */
