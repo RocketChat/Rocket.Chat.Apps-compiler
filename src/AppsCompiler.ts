@@ -14,6 +14,7 @@ import { FolderDetails } from './misc/folderDetails';
 import { AppPackager } from './misc/appPackager';
 import { ICompilerDiagnostic } from './definition/ICompilerDiagnostic';
 import { IPermission } from './definition/IPermission';
+import { MemFS } from './misc/MemFS';
 
 type TypeScript = typeof fallbackTypescript;
 
@@ -356,21 +357,11 @@ export class AppsCompiler {
 
     private checkInheritance(mainClassFile: string): void {
         const node_modules = path.join(this.wd, 'node_modules');
-
-        const listFiles = (rootPath: string): any =>
-            (fs.readdirSync(rootPath, { withFileTypes: true })
-                .map((subdir) => {
-                    const fullpath = path.resolve(rootPath, subdir.name);
-                    return fs.statSync(fullpath).isDirectory() ? listFiles(fullpath) : fullpath;
-                }) as any)
-                .flat(Infinity);
-        const lib = listFiles(node_modules)
-            .reduce((lib: { [path: string]: string }, filenname: string): any =>
-                Object.assign(lib, { [path.relative(this.wd, filenname)]: fs.readFileSync(filenname, { encoding: 'utf-8' }) }), []);
+        const memfs = MemFS.addFiles(this.compiled).addFilesFromLocalDir(this.wd, node_modules);
 
         Promise.all([
-            Utilities.memoryRequire(lib, 'node_modules/@rocket.chat/apps-engine/definition/App'),
-            Utilities.memoryRequire(Object.assign(this.compiled, lib), mainClassFile),
+            memfs.require('node_modules/@rocket.chat/apps-engine/definition/App'),
+            memfs.require(mainClassFile),
         ])
             .then(([{ App: EngineBaseApp }, mainClassModule]) => {
                 if (!mainClassModule.default && !mainClassModule[mainClassFile]) {
