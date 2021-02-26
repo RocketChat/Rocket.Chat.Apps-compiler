@@ -1,8 +1,8 @@
-// import { ICompilerFile } from '../compiler';
+import { patchRequire } from 'fs-monkey';
+import { vol } from 'memfs';
 import * as path from 'path';
 
 import cloneDeep = require('lodash.clonedeep');
-
 
 enum AllowedInternalModules {
     path,
@@ -44,5 +44,19 @@ export class Utilities {
 
     public static transformModuleForCustomRequire(moduleName: string): string {
         return `${ path.normalize(moduleName).replace(/\.\.?\//g, '').replace(/^\//, '') }.ts`;
+    }
+
+    public static memoryRequire(files: { [path: string]: string }, path: string): Promise<any> {
+        const transformedFiles = Object.entries(files)
+            .map(([path, content]) => ({ [`/${ path }`]: content }))
+            .reduce((files, file) => Object.assign(files, file), {});
+
+        vol.fromJSON(transformedFiles);
+        const unpatch = patchRequire(vol);
+        // eslint-disable-next-line @typescript-eslint/no-var-requires,import/no-dynamic-require
+        const module = require(`/${ path }`);
+        unpatch();
+
+        return module;
     }
 }

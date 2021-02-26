@@ -4,7 +4,7 @@ import * as fallbackTypescript from 'typescript';
 import {
     CompilerOptions, Diagnostic, EmitOutput,
     HeritageClause, LanguageServiceHost,
-    ModuleResolutionHost, ResolvedModule, SourceFile,
+    ModuleResolutionHost, ResolvedModule,
 } from 'typescript';
 
 import { getAppSource } from './compiler/getAppSource';
@@ -61,8 +61,10 @@ export class AppsCompiler {
         this.compiled = Object.entries(files)
             .map(([, { name, compiled }]) => ({ [name]: compiled }))
             .reduce((acc, cur) => Object.assign(acc, cur), {});
-
         this.implemented = implemented;
+
+        // Post compilation validations
+        this.checkInheritance(source.appInfo.classFile.replace(/\.ts$/, ''));
 
         return compilerResult;
     }
@@ -218,9 +220,7 @@ export class AppsCompiler {
                     const e = node as HeritageClause;
 
                     this.ts.forEachChild(node, (nn) => {
-                        if (e.token === this.ts.SyntaxKind.ExtendsKeyword) {
-                            this.checkInheritance(src);
-                        } else if (e.token === this.ts.SyntaxKind.ImplementsKeyword) {
+                        if (e.token === this.ts.SyntaxKind.ImplementsKeyword) {
                             result.implemented.push(nn.getText());
                         } else {
                             console.log(e.token, nn.getText());
@@ -354,36 +354,44 @@ export class AppsCompiler {
         return this.libraryFiles[norm];
     }
 
-    private checkInheritance(src: SourceFile): void {
-        this.ts.forEachChild(src, (n) => {
-            if (this.ts.isImportDeclaration(n)) {
-                const appsEngine = path.join(this.wd, 'node_modules/@rocket.chat/apps-engine/definition/App');
-                const mainClassFile = path.join(this.wd, src.fileName);
+    private checkInheritance(mainClassFile: string): void {
+        const node_modules = path.join(this.wd, 'node_modules');
 
-                Promise.all([import(appsEngine), import(mainClassFile)])
-                    .then(([{ App: EngineBaseApp }, mainClassModule]) => {
-                        const appName = src.fileName.replace(/\.ts$/, '');
+        const listFiles = (rootPath: string): any =>
+            (fs.readdirSync(rootPath, { withFileTypes: true })
+                .map((subdir) => {
+                    const fullpath = path.resolve(rootPath, subdir.name);
+                    return fs.statSync(fullpath).isDirectory() ? listFiles(fullpath) : fullpath;
+                }) as any)
+                .flat(Infinity);
+        const lib = listFiles(node_modules)
+            .reduce((lib: { [path: string]: string }, filenname: string): any =>
+                Object.assign(lib, { [path.relative(this.wd, filenname)]: fs.readFileSync(filenname, { encoding: 'utf-8' }) }), []);
 
-                        if (!mainClassModule.default && !mainClassModule[appName]) {
-                            throw new Error(`There must be an exported class "${ appName }" in the main class file.`);
-                        }
-                        const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[appName];
-                        const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
-                        const mockLogger = { debug: () => { } };
-                        const realApp = new RealApp(mockInfo, mockLogger);
+        Promise.all([
+            Utilities.memoryRequire(lib, 'node_modules/@rocket.chat/apps-engine/definition/App'),
+            Utilities.memoryRequire(Object.assign(this.compiled, lib), mainClassFile),
+        ])
+            .then(([{ App: EngineBaseApp }, mainClassModule]) => {
+                if (!mainClassModule.default && !mainClassModule[mainClassFile]) {
+                    throw new Error(`There must be an exported class "${ mainClassFile }" in the main class file.`);
+                }
+                const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[mainClassFile];
+                const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
+                const mockLogger = { debug: () => { } };
+                const realApp = new RealApp(mockInfo, mockLogger);
+                console.log(realApp, EngineBaseApp, realApp instanceof EngineBaseApp);
 
-                        if (!(realApp instanceof EngineBaseApp)) {
-                            throw new Error('App must extend apps-engine\'s "App" abstract class.'
-                                + ' Maybe you forgot to install dependencies? Try running `npm install`'
-                                + ' in your app folder to fix it.',
-                            );
-                        }
-                    }).catch((err) => {
-                        console.error(err);
-                        process.exit(0);
-                    });
-            }
-        });
+                if (!(realApp instanceof EngineBaseApp)) {
+                    throw new Error('App must extend apps-engine\'s "App" abstract class.'
+                        + ' Maybe you forgot to install dependencies? Try running `npm install`'
+                        + ' in your app folder to fix it.',
+                    );
+                }
+            }).catch((err) => {
+                console.error(err);
+                process.exit(0);
+            });
     }
 
     private isValidFile(file: ICompilerFile): boolean {
