@@ -9,7 +9,7 @@ interface IFiles {
 
 /**
  * A file system in the memory that can help us require a Node.js
- * module from a file in the memory file system.
+ * module from files in the memory.
  */
 export const MemFS = new class {
     public files: IFiles = {};
