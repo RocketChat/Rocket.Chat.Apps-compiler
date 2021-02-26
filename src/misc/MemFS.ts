@@ -60,7 +60,7 @@ export const MemFS = new class {
             .reduce((lib: { [path: string]: string }, filenname: string): any =>
                 Object.assign(lib, {
                     [path.relative(workdingDirectory, filenname)]: fs.readFileSync(filenname, { encoding: 'utf-8' }),
-                }), []);
+                }), {});
 
         Object.assign(this.files, lib);
         return this;
