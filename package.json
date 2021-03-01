@@ -3,16 +3,16 @@
     "version": "0.1.5",
     "description": "The Rocket.Chat apps compiler",
     "main": "index.js",
+    "engines": {
+        "node": ">= 12.2.0"
+    },
     "scripts": {
         "test": "mocha -r ts-node/register './tests/**/*.spec.ts'",
         "test:watch": "mocha --require ts-node/register --watch --watch-files src, 'tests/**/*.ts'",
         "build": "rm -rf dist && mkdir dist && cp package.json dist && tsc",
         "build:prod": "npm run build -- --sourceMap false --declarationMap false && cp LICENSE dist && cp README.md dist",
         "lint": "npx eslint src/**/*.ts",
-        "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' ./index.ts",
-        "dev:debug": "nodemon --watch 'src/**/*.ts' --exec node -r ts-node/register --inspect --inspect=0.0.0.0:9229 ./index.ts",
-        "publish": "npm run build:prod && cd dist && npm publish --access public",
-        "pack": "npm run build:prod && cd dist && npm pack"
+        "release": "npm run build:prod && cd dist && npm publish --access public"
     },
     "repository": {
         "type": "git",
@@ -46,8 +46,7 @@
         "eslint": "^7.9.0",
         "husky": "^4.2.5",
         "mocha": "^8.0.1",
-        "nodemon": "^2.0.4",
-        "ts-node": "^8.10.2"
+        "ts-node": "^9.1.1"
     },
     "dependencies": {
         "@rocket.chat/apps-engine": "^1.22.2",
@@ -64,19 +63,5 @@
         "hooks": {
             "pre-push": "npm run lint && npm test"
         }
-    },
-    "nodemonConfig": {
-        "ignore": [
-            "**/*.test.ts",
-            "**/*.spec.ts",
-            ".git",
-            "node_modules"
-        ],
-        "watch": [
-            "src",
-            "custom-scripts"
-        ],
-        "exec": "npm run compile",
-        "ext": "ts"
     }
 }
