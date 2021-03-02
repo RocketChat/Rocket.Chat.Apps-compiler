@@ -385,7 +385,7 @@ export class AppsCompiler {
     }
 
     /**
-     * Require a module from the compiled app source files
+     * Require a module from the app compiled  source files
      */
     private requireCompiled(filename: string): any {
         const exports = {};
