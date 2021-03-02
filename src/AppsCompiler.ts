@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as vm from 'vm';
 import * as path from 'path';
 import * as fallbackTypescript from 'typescript';
 import {
@@ -14,7 +15,6 @@ import { FolderDetails } from './misc/folderDetails';
 import { AppPackager } from './misc/appPackager';
 import { ICompilerDiagnostic } from './definition/ICompilerDiagnostic';
 import { IPermission } from './definition/IPermission';
-import { MemFS } from './misc/MemFS';
 
 type TypeScript = typeof fallbackTypescript;
 
@@ -357,12 +357,11 @@ export class AppsCompiler {
     }
 
     private checkInheritance(mainClassFile: string): void {
-        const node_modules = path.join(this.wd, 'node_modules');
-        const memfs = MemFS.addFiles(this.compiled).addFilesFromLocalDir(this.wd, node_modules);
+        const engine = path.join(this.wd, 'node_modules/@rocket.chat/apps-engine/definition/App');
 
         Promise.all([
-            memfs.require('node_modules/@rocket.chat/apps-engine/definition/App'),
-            memfs.require(mainClassFile),
+            import(engine),
+            this.require(mainClassFile),
         ])
             .then(([{ App: EngineBaseApp }, mainClassModule]) => {
                 if (!mainClassModule.default && !mainClassModule[mainClassFile]) {
@@ -383,6 +382,24 @@ export class AppsCompiler {
                 console.error(err);
                 process.exit(0);
             });
+    }
+
+    private require(filename: string): any {
+        const exports = {};
+        const context = vm.createContext({
+            require: (filepath: string) => {
+                if (filepath.startsWith('@rocket.chat/apps-engine/definition/')) {
+                    return require(`${ this.wd }/node_modules/${ filepath }.js`);
+                }
+
+                if (Utilities.allowedInternalModuleRequire(filepath)) {
+                    return require(filepath);
+                }
+            },
+            exports,
+        });
+        vm.runInContext(this.compiled[`${ filename }.js`], context);
+        return exports;
     }
 
     private isValidFile(file: ICompilerFile): boolean {
