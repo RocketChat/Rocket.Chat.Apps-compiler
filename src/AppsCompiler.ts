@@ -361,7 +361,7 @@ export class AppsCompiler {
 
         Promise.all([
             import(engine),
-            this.require(mainClassFile),
+            this.requireCompiled(mainClassFile),
         ])
             .then(([{ App: EngineBaseApp }, mainClassModule]) => {
                 if (!mainClassModule.default && !mainClassModule[mainClassFile]) {
@@ -384,7 +384,10 @@ export class AppsCompiler {
             });
     }
 
-    private require(filename: string): any {
+    /**
+     * Require a module from the compiled app source files
+     */
+    private requireCompiled(filename: string): any {
         const exports = {};
         const context = vm.createContext({
             require: (filepath: string) => {
