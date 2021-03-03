@@ -365,7 +365,7 @@ export class AppsCompiler {
         ])
             .then(([{ App: EngineBaseApp }, mainClassModule]) => {
                 if (!mainClassModule.default && !mainClassModule[mainClassFile]) {
-                    throw new Error(`There must be an exported class "${ mainClassFile }" in the main class file.`);
+                    throw new Error(`There must be an exported class "${ mainClassFile }" or a default export in the main class file.`);
                 }
                 const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[mainClassFile];
                 const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
