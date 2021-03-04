@@ -16,6 +16,7 @@ import { FolderDetails } from './misc/folderDetails';
 import { AppPackager } from './misc/appPackager';
 import { ICompilerDiagnostic } from './definition/ICompilerDiagnostic';
 import { IPermission } from './definition/IPermission';
+import { getAvailablePermissions } from './misc/getAvailablePermissions';
 
 type TypeScript = typeof fallbackTypescript;
 
@@ -109,21 +110,25 @@ export class AppsCompiler {
     }
 
     private validateAppPermissionsSchema(permissions: Array<IPermission>): void {
-        const examplePermissions = [{ name: 'user.read' }, { name: 'upload.write' }];
-        const error = new Error('Permissions declared in the app.json doesn\'t match the schema. '
-            + `It shoud be an peemissions array. e.g. ${ JSON.stringify(examplePermissions) }`);
-
         if (!permissions) {
             return;
         }
 
         if (!Array.isArray(permissions)) {
-            throw error;
+            throw new Error('Invalid permission definition. Check your manifest file.');
         }
 
+        const permissionsRequire = this.appRequire('@rocket.chat/apps-engine/server/permissions/AppPermissions');
+
+        if (!permissionsRequire || !permissionsRequire.AppPermissions) {
+            return;
+        }
+
+        const availablePermissions = getAvailablePermissions(permissionsRequire.AppPermissions);
+
         permissions.forEach((permission) => {
-            if (!permission || !permission.name) {
-                throw error;
+            if (permission && !availablePermissions.includes(permission.name)) {
+                throw new Error(`Invalid permission "${ String(permission.name) }" defined. Check your manifest file`);
             }
         });
     }
