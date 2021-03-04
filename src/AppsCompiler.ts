@@ -370,16 +370,13 @@ export class AppsCompiler {
     }
 
     private checkInheritance(mainClassFile: string): void {
-        const engine = path.join(this.wd, 'node_modules/@rocket.chat/apps-engine/definition/App');
+        const { App: EngineBaseApp } = this.appRequire('@rocket.chat/apps-engine/definition/App');
+        const mainClassModule = this.requireCompiled(mainClassFile);
 
-        Promise.all([
-            import(engine),
-            this.requireCompiled(mainClassFile),
-        ])
-            .then(([{ App: EngineBaseApp }, mainClassModule]) => {
                 if (!mainClassModule.default && !mainClassModule[mainClassFile]) {
                     throw new Error(`There must be an exported class "${ mainClassFile }" or a default export in the main class file.`);
                 }
+
                 const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[mainClassFile];
                 const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
                 const mockLogger = { debug: () => { } };
@@ -391,10 +388,6 @@ export class AppsCompiler {
                         + ' in your app folder to fix it.',
                     );
                 }
-            }).catch((err) => {
-                console.error(err);
-                process.exit(0);
-            });
     }
 
     /**
