@@ -3,7 +3,6 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import * as Yazl from 'yazl';
 import glob, { IOptions } from 'glob';
-import { AppInterface } from '@rocket.chat/apps-engine/definition/metadata';
 
 import { FolderDetails } from './folderDetails';
 import { AppsCompiler } from '../AppsCompiler';
@@ -49,8 +48,10 @@ export class AppPackager {
     }
 
     private overwriteAppManifest(): void {
+        const { AppInterface } = this.compiledApp.appRequire('@rocket.chat/apps-engine/definition/metadata');
+
         this.fd.info.implements = this.compiledApp.getImplemented()
-            .filter((interfaceName) => !!AppInterface[interfaceName as AppInterface]) as Array<AppInterface>;
+            .filter((interfaceName) => !!AppInterface[interfaceName]) as Array<typeof AppInterface>;
 
         fs.writeFileSync(this.fd.infoFile, JSON.stringify(this.fd.info, null, 4));
     }
