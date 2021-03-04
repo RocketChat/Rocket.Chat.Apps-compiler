@@ -8,6 +8,7 @@ import {
     ModuleResolutionHost, ResolvedModule,
 } from 'typescript';
 
+import { createRequire } from 'module';
 import { getAppSource } from './compiler/getAppSource';
 import { IAppSource, ICompilerDescriptor, ICompilerFile, ICompilerResult, IMapCompilerFile, IFiles } from './definition';
 import { Utilities } from './misc/Utilities';
@@ -28,6 +29,8 @@ export class AppsCompiler {
     private implemented: string[];
 
     private wd: string;
+
+    private _appRequire: NodeRequire;
 
     constructor(
         private readonly compilerDesc: ICompilerDescriptor,
@@ -51,8 +54,18 @@ export class AppsCompiler {
         this.libraryFiles = {};
     }
 
+    /**
+    * Requires a module from the app's node_modules directory
+    *
+    * @param id {string} The id of the module
+     */
+    public get appRequire(): NodeRequire {
+        return this._appRequire;
+    }
+
     public async compile(path: string): Promise<ICompilerResult> {
         this.wd = path;
+        this._appRequire = createRequire(`${ path }/app.json`);
 
         const source = await getAppSource(path);
 
