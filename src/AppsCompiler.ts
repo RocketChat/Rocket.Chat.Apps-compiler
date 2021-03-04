@@ -373,21 +373,21 @@ export class AppsCompiler {
         const { App: EngineBaseApp } = this.appRequire('@rocket.chat/apps-engine/definition/App');
         const mainClassModule = this.requireCompiled(mainClassFile);
 
-                if (!mainClassModule.default && !mainClassModule[mainClassFile]) {
-                    throw new Error(`There must be an exported class "${ mainClassFile }" or a default export in the main class file.`);
-                }
+        if (!mainClassModule.default && !mainClassModule[mainClassFile]) {
+            throw new Error(`There must be an exported class "${ mainClassFile }" or a default export in the main class file.`);
+        }
 
-                const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[mainClassFile];
-                const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
-                const mockLogger = { debug: () => { } };
-                const realApp = new RealApp(mockInfo, mockLogger);
+        const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[mainClassFile];
+        const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
+        const mockLogger = { debug: () => { } };
+        const realApp = new RealApp(mockInfo, mockLogger);
 
-                if (!(realApp instanceof EngineBaseApp)) {
-                    throw new Error('App must extend apps-engine\'s "App" abstract class.'
-                        + ' Maybe you forgot to install dependencies? Try running `npm install`'
-                        + ' in your app folder to fix it.',
-                    );
-                }
+        if (!(realApp instanceof EngineBaseApp)) {
+            throw new Error('App must extend apps-engine\'s "App" abstract class.'
+                + ' Maybe you forgot to install dependencies? Try running `npm install`'
+                + ' in your app folder to fix it.',
+            );
+        }
     }
 
     /**
@@ -397,12 +397,27 @@ export class AppsCompiler {
         const exports = {};
         const context = vm.createContext({
             require: (filepath: string) => {
+                // Handles Apps-Engine import
                 if (filepath.startsWith('@rocket.chat/apps-engine/definition/')) {
                     return require(`${ this.wd }/node_modules/${ filepath }.js`);
                 }
 
+                // Handles native node modules import
                 if (Utilities.allowedInternalModuleRequire(filepath)) {
                     return require(filepath);
+                }
+
+                // At this point, if the app is trying to require anything that
+                // is not a relative path, we don't want to let it through
+                if (!filepath.startsWith('.')) {
+                    return undefined;
+                }
+
+                filepath = path.normalize(`${ path.dirname(filename) }/${ filepath }`);
+
+                // Handles import of other files in app's source
+                if (this.compiled[filepath.endsWith('.js') ? filepath : `${ filepath }.js`]) {
+                    return this.requireCompiled(filepath);
                 }
             },
             exports,
