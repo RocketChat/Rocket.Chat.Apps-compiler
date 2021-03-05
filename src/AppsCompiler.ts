@@ -69,15 +69,16 @@ export class AppsCompiler {
         const source = await getAppSource(path);
         const compilerResult = this.toJs(source);
         const { files, implemented } = compilerResult;
+        const { permissions } = source.appInfo;
 
-        this.validateAppPermissionsSchema(source.appInfo.permissions);
+        this.validateAppPermissionsSchema(permissions);
         this.compiled = Object.entries(files)
             .map(([, { name, compiled }]) => ({ [name]: compiled }))
             .reduce((acc, cur) => Object.assign(acc, cur), {});
 
         this.implemented = implemented;
 
-        return compilerResult;
+        return Object.assign(compilerResult, { permissions });
     }
 
     public output(): IFiles {
@@ -122,14 +123,14 @@ export class AppsCompiler {
         });
     }
 
-    private toJs({ appInfo, sourceFiles: files }: IAppSource): ICompilerResult {
+    private toJs({ appInfo, sourceFiles: files }: IAppSource): Omit<ICompilerResult, 'permissions'> {
         if (!appInfo.classFile || !files[appInfo.classFile] || !this.isValidFile(files[appInfo.classFile])) {
             throw new Error(`Invalid App package. Could not find the classFile (${ appInfo.classFile }) file.`);
         }
 
         const startTime = Date.now();
 
-        const result: ICompilerResult = {
+        const result: Omit<ICompilerResult, 'permissions'> = {
             files,
             implemented: [],
             diagnostics: [],
@@ -313,7 +314,7 @@ export class AppsCompiler {
         moduleName: string,
         resolvedModules: Array<ResolvedModule>,
         containingFile: string,
-        result: ICompilerResult,
+        result: Omit<ICompilerResult, 'permissions'>,
         cwd: string,
         moduleResHost: ModuleResolutionHost,
     ): number {
