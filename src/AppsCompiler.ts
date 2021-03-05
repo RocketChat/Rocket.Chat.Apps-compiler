@@ -8,6 +8,7 @@ import {
 } from 'typescript';
 
 import { createRequire } from 'module';
+import { Omit } from './misc/util';
 import { getAppSource } from './compiler/getAppSource';
 import { IAppSource, ICompilerDescriptor, ICompilerFile, ICompilerResult, IMapCompilerFile, IFiles } from './definition';
 import { Utilities } from './misc/Utilities';
