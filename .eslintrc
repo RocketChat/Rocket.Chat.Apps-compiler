@@ -59,7 +59,8 @@
                 }],
                 "no-return-assign": "off",
                 "no-nested-ternary": "off",
-                "curly": "off"
+                "curly": "off",
+                "import/no-dynamic-require": "off"
             },
             "env": {
                 "commonjs": true,

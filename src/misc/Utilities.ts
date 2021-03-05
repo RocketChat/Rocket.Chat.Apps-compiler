@@ -1,8 +1,5 @@
-// import { ICompilerFile } from '../compiler';
 import * as path from 'path';
-
 import cloneDeep = require('lodash.clonedeep');
-
 
 enum AllowedInternalModules {
     path,
