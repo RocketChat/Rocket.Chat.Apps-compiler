@@ -8,6 +8,7 @@ import {
     ModuleResolutionHost, ResolvedModule,
 } from 'typescript';
 
+import { createRequire } from 'module';
 import { getAppSource } from './compiler/getAppSource';
 import { IAppSource, ICompilerDescriptor, ICompilerFile, ICompilerResult, IMapCompilerFile, IFiles } from './definition';
 import { Utilities } from './misc/Utilities';
@@ -15,6 +16,7 @@ import { FolderDetails } from './misc/folderDetails';
 import { AppPackager } from './misc/appPackager';
 import { ICompilerDiagnostic } from './definition/ICompilerDiagnostic';
 import { IPermission } from './definition/IPermission';
+import { getAvailablePermissions } from './misc/getAvailablePermissions';
 
 type TypeScript = typeof fallbackTypescript;
 
@@ -28,6 +30,8 @@ export class AppsCompiler {
     private implemented: string[];
 
     private wd: string;
+
+    private _appRequire: NodeRequire;
 
     constructor(
         private readonly compilerDesc: ICompilerDescriptor,
@@ -51,8 +55,18 @@ export class AppsCompiler {
         this.libraryFiles = {};
     }
 
+    /**
+    * Requires a module from the app's node_modules directory
+    *
+    * @param id {string} The id of the module
+     */
+    public get appRequire(): NodeRequire {
+        return this._appRequire;
+    }
+
     public async compile(path: string): Promise<ICompilerResult> {
         this.wd = path;
+        this._appRequire = createRequire(`${ path }/app.json`);
 
         const source = await getAppSource(path);
 
@@ -96,21 +110,25 @@ export class AppsCompiler {
     }
 
     private validateAppPermissionsSchema(permissions: Array<IPermission>): void {
-        const examplePermissions = [{ name: 'user.read' }, { name: 'upload.write' }];
-        const error = new Error('Permissions declared in the app.json doesn\'t match the schema. '
-            + `It shoud be an peemissions array. e.g. ${ JSON.stringify(examplePermissions) }`);
-
         if (!permissions) {
             return;
         }
 
         if (!Array.isArray(permissions)) {
-            throw error;
+            throw new Error('Invalid permission definition. Check your manifest file.');
         }
 
+        const permissionsRequire = this.appRequire('@rocket.chat/apps-engine/server/permissions/AppPermissions');
+
+        if (!permissionsRequire || !permissionsRequire.AppPermissions) {
+            return;
+        }
+
+        const availablePermissions = getAvailablePermissions(permissionsRequire.AppPermissions);
+
         permissions.forEach((permission) => {
-            if (!permission || !permission.name) {
-                throw error;
+            if (permission && !availablePermissions.includes(permission.name)) {
+                throw new Error(`Invalid permission "${ String(permission.name) }" defined. Check your manifest file`);
             }
         });
     }
@@ -357,31 +375,24 @@ export class AppsCompiler {
     }
 
     private checkInheritance(mainClassFile: string): void {
-        const engine = path.join(this.wd, 'node_modules/@rocket.chat/apps-engine/definition/App');
+        const { App: EngineBaseApp } = this.appRequire('@rocket.chat/apps-engine/definition/App');
+        const mainClassModule = this.requireCompiled(mainClassFile);
 
-        Promise.all([
-            import(engine),
-            this.requireCompiled(mainClassFile),
-        ])
-            .then(([{ App: EngineBaseApp }, mainClassModule]) => {
-                if (!mainClassModule.default && !mainClassModule[mainClassFile]) {
-                    throw new Error(`There must be an exported class "${ mainClassFile }" in the main class file.`);
-                }
-                const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[mainClassFile];
-                const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
-                const mockLogger = { debug: () => { } };
-                const realApp = new RealApp(mockInfo, mockLogger);
+        if (!mainClassModule.default && !mainClassModule[mainClassFile]) {
+            throw new Error(`There must be an exported class "${ mainClassFile }" or a default export in the main class file.`);
+        }
 
-                if (!(realApp instanceof EngineBaseApp)) {
-                    throw new Error('App must extend apps-engine\'s "App" abstract class.'
-                        + ' Maybe you forgot to install dependencies? Try running `npm install`'
-                        + ' in your app folder to fix it.',
-                    );
-                }
-            }).catch((err) => {
-                console.error(err);
-                process.exit(0);
-            });
+        const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[mainClassFile];
+        const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
+        const mockLogger = { debug: () => { } };
+        const realApp = new RealApp(mockInfo, mockLogger);
+
+        if (!(realApp instanceof EngineBaseApp)) {
+            throw new Error('App must extend apps-engine\'s "App" abstract class.'
+                + ' Maybe you forgot to install dependencies? Try running `npm install`'
+                + ' in your app folder to fix it.',
+            );
+        }
     }
 
     /**
@@ -391,12 +402,27 @@ export class AppsCompiler {
         const exports = {};
         const context = vm.createContext({
             require: (filepath: string) => {
+                // Handles Apps-Engine import
                 if (filepath.startsWith('@rocket.chat/apps-engine/definition/')) {
                     return require(`${ this.wd }/node_modules/${ filepath }.js`);
                 }
 
+                // Handles native node modules import
                 if (Utilities.allowedInternalModuleRequire(filepath)) {
                     return require(filepath);
+                }
+
+                // At this point, if the app is trying to require anything that
+                // is not a relative path, we don't want to let it through
+                if (!filepath.startsWith('.')) {
+                    return undefined;
+                }
+
+                filepath = path.normalize(`${ path.dirname(filename) }/${ filepath }`);
+
+                // Handles import of other files in app's source
+                if (this.compiled[filepath.endsWith('.js') ? filepath : `${ filepath }.js`]) {
+                    return this.requireCompiled(filepath);
                 }
             },
             exports,
