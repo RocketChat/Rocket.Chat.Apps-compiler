@@ -408,7 +408,7 @@ export class AppsCompiler {
             require: (filepath: string) => {
                 // Handles Apps-Engine import
                 if (filepath.startsWith('@rocket.chat/apps-engine/definition/')) {
-                    return require(`${ this.wd }/node_modules/${ filepath }.js`);
+                    return require(`${ this.wd }/node_modules/${ filepath }`);
                 }
 
                 // Handles native node modules import
