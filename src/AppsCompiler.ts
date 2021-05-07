@@ -264,7 +264,7 @@ export class AppsCompiler {
             const file: ICompilerFile = result.files[key];
             const output: EmitOutput = languageService.getEmitOutput(file.name);
 
-            file.name = key.replace(/\.ts/g, '.js');
+            file.name = key.replace(/\.ts$/g, '.js');
 
             delete result.files[key];
             result.files[file.name] = file;
