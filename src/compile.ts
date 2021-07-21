@@ -49,11 +49,11 @@ export async function compile(compilerDesc: ICompilerDescriptor, sourceDir: stri
     }
 
     try {
-        const compiler = new AppsCompiler(compilerDesc, appTs);
+        const compiler = new AppsCompiler(compilerDesc, sourceDir, appTs);
 
         log.debug('Starting compilation...');
 
-        const result = await compiler.compile(sourceDir);
+        const result = await compiler.compile();
 
         if (result.diagnostics.length) {
             return result;
