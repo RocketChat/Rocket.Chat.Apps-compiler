@@ -10,5 +10,5 @@ export interface ICompilerResult {
     name: string;
     version: string;
     typeScriptVersion: string;
-    permissions: Array<IPermission>;
+    permissions?: Array<IPermission>;
 }
