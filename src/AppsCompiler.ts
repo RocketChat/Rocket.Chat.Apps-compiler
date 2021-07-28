@@ -3,16 +3,19 @@ import * as fallbackTypescript from 'typescript';
 
 import { createRequire } from 'module';
 import { getAppSource } from './compiler/getAppSource';
-import { ICompilerDescriptor, ICompilerResult } from './definition';
+import { IBundledCompilerResult, ICompilerDescriptor, ICompilerResult } from './definition';
 import { FolderDetails } from './misc/folderDetails';
-import { AppPackager } from './misc/appPackager';
+import { AppPackager } from './packager';
 import { TypescriptCompiler } from './compiler/TypescriptCompiler';
 import { AppsEngineValidator } from './compiler/AppsEngineValidator';
+import getBundler, { AvailableBundlers, BundlerFunction } from './bundler';
 
 export type TypeScript = typeof fallbackTypescript;
 
 export class AppsCompiler {
-    private compilationResult: ICompilerResult | undefined;
+    private compilationResult?: ICompilerResult;
+
+    private readonly bundler: BundlerFunction;
 
     private readonly validator: AppsEngineValidator;
 
@@ -26,10 +29,18 @@ export class AppsCompiler {
         this.validator = new AppsEngineValidator(createRequire(`${ sourcePath }/app.json`));
 
         this.typescriptCompiler = new TypescriptCompiler(sourcePath, ts, this.validator);
+        this.bundler = getBundler(AvailableBundlers.esbuild);
     }
 
-    public getLatestCompilationResult(): AppsCompiler['compilationResult'] {
+    public getLatestCompilationResult(): ICompilerResult {
         return this.compilationResult;
+    }
+
+    public async run(outputPath: string): Promise<Buffer> {
+        await this.compile();
+        await this.bundle();
+
+        return this.outputZip(outputPath);
     }
 
     public async compile(): Promise<ICompilerResult> {
@@ -38,6 +49,12 @@ export class AppsCompiler {
         this.compilationResult = this.typescriptCompiler.transpileSource(source);
 
         return this.getLatestCompilationResult();
+    }
+
+    public async bundle(): Promise<IBundledCompilerResult> {
+        this.compilationResult = await this.bundler(this.getLatestCompilationResult());
+
+        return this.getLatestCompilationResult() as IBundledCompilerResult;
     }
 
     public async outputZip(outputPath: string): Promise<Buffer> {

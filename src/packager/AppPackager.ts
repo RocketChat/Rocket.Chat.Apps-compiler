@@ -4,8 +4,9 @@ import * as fs from 'fs-extra';
 import * as Yazl from 'yazl';
 import glob, { IOptions } from 'glob';
 
-import { FolderDetails } from './folderDetails';
-import { ICompilerDescriptor, ICompilerResult } from '../definition';
+import { FolderDetails } from '../misc/folderDetails';
+import { IBundledCompilerResult, ICompilerDescriptor, ICompilerResult } from '../definition';
+import { isBundled } from '../bundler';
 
 export class AppPackager {
     public static GlobOptions: IOptions = {
@@ -24,12 +25,12 @@ export class AppPackager {
         ],
     };
 
-    private zip: Yazl.ZipFile = new Yazl.ZipFile();
+    private zip = new Yazl.ZipFile();
 
     constructor(
         private readonly compilerDesc: ICompilerDescriptor,
         private fd: FolderDetails,
-        private compilationResult: ICompilerResult,
+        private compilationResult: ICompilerResult | IBundledCompilerResult,
         private outputFilename: string,
     ) { }
 
@@ -91,12 +92,15 @@ export class AppPackager {
     }
 
     private zipFilesFromCompiledSource(): void {
-        Object.entries(this.compilationResult.files)
-            .map(([filename, contents]) => this.zip.addBuffer(
-                Buffer.from(contents.compiled),
-                filename,
-                { compress: true },
-            ));
+        if (isBundled(this.compilationResult)) {
+            this.zip.addBuffer(Buffer.from(this.compilationResult.bundle), this.compilationResult.mainFile.name);
+        } else {
+            Object.entries(this.compilationResult.files)
+                .map(([filename, contents]) => this.zip.addBuffer(
+                    Buffer.from(contents.compiled),
+                    filename,
+                ));
+        }
     }
 
     // tslint:disable-next-line:promise-function-async

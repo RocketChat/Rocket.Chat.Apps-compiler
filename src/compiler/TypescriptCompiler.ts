@@ -169,6 +169,8 @@ export class TypescriptCompiler {
             file.compiled = output.outputFiles[0].text;
         });
 
+        result.mainFile = result.files[appInfo.classFile.replace(/\.ts$/, '.js')];
+
         this.appValidator.checkInheritance(appInfo.classFile.replace(/\.ts$/, ''), result);
 
         result.duration = Date.now() - startTime;
