@@ -34,9 +34,21 @@ export class AppsEngineValidator {
     }
 
     public isValidAppInterface(interfaceName: string): boolean {
-        const { AppInterface } = this.appSourceRequire('@rocket.chat/apps-engine/definition/metadata');
+        let { AppInterface } = this.appSourceRequire('@rocket.chat/apps-engine/definition/metadata');
 
-        return !!AppInterface[interfaceName];
+        if (!AppInterface) {
+            AppInterface = this.appSourceRequire('@rocket.chat/apps-engine/server/compiler/AppImplements');
+        }
+
+        return interfaceName in AppInterface;
+    }
+
+    public resolveAppDependencyPath(module: string): string | undefined {
+        try {
+            return this.appSourceRequire.resolve(module);
+        } catch (e) {
+            console.warn(e);
+        }
     }
 
     public checkInheritance(mainClassFile: string, compilationResult: ICompilerResult): void {

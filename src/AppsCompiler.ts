@@ -52,7 +52,7 @@ export class AppsCompiler {
     }
 
     public async bundle(): Promise<IBundledCompilerResult> {
-        this.compilationResult = await this.bundler(this.getLatestCompilationResult());
+        this.compilationResult = await this.bundler(this.getLatestCompilationResult(), this.validator);
 
         return this.getLatestCompilationResult() as IBundledCompilerResult;
     }
