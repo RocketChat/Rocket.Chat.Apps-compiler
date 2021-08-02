@@ -55,11 +55,16 @@ export class AppsEngineValidator {
         const { App: EngineBaseApp } = this.appSourceRequire('@rocket.chat/apps-engine/definition/App');
         const mainClassModule = this.compiledRequire(mainClassFile, compilationResult);
 
-        if (!mainClassModule.default && !mainClassModule[mainClassFile]) {
+        const RealApp = typeof mainClassModule === 'function'
+            ? mainClassModule
+            : mainClassModule.default
+                ? mainClassModule.default
+                : mainClassModule[mainClassFile];
+
+        if (!RealApp) {
             throw new Error(`There must be an exported class "${ mainClassFile }" or a default export in the main class file.`);
         }
 
-        const RealApp = mainClassModule.default ? mainClassModule.default : mainClassModule[mainClassFile];
         const mockInfo = { name: '', requiredApiVersion: '', author: { name: '' } };
         const mockLogger = { debug: () => { } };
         const realApp = new RealApp(mockInfo, mockLogger);
@@ -105,8 +110,8 @@ export class AppsEngineValidator {
             exports,
         });
 
-        vm.runInContext(compilationResult.files[`${ filename }.js` as keyof ICompilerResult['files']].compiled, context);
+        const result = vm.runInContext(compilationResult.files[`${ filename }.js` as keyof ICompilerResult['files']].compiled, context);
 
-        return exports;
+        return result || exports;
     }
 }
