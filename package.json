@@ -50,6 +50,7 @@
     },
     "dependencies": {
         "@rocket.chat/apps-engine": "^1.22.2",
+        "esbuild": "^0.12.16",
         "figures": "^3.0.0",
         "fs-extra": "^8.1.0",
         "glob": "^7.1.4",

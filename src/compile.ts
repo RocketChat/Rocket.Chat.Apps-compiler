@@ -49,24 +49,29 @@ export async function compile(compilerDesc: ICompilerDescriptor, sourceDir: stri
     }
 
     try {
-        const compiler = new AppsCompiler(compilerDesc, appTs);
+        const compiler = new AppsCompiler(compilerDesc, sourceDir, appTs);
 
         log.debug('Starting compilation...');
 
-        const result = await compiler.compile(sourceDir);
+        const result = await compiler.compile();
 
         if (result.diagnostics.length) {
             return result;
         }
 
         log.debug('Compilation complete, inspection \n', inspect(result));
+        log.debug('Starting bundling...');
+
+        await compiler.bundle();
+
+        log.debug('Compilation complete, inspection \n', inspect(compiler.getLatestCompilationResult()));
         log.debug('Starting packaging...');
 
         await compiler.outputZip(outputFile);
 
         log.info(`Compilation successful! Took ${ result.duration / 1000 }s. Package saved at `, outputFile);
 
-        return result;
+        return compiler.getLatestCompilationResult();
     } catch (error) {
         log.error('Compilation was unsuccessful');
 

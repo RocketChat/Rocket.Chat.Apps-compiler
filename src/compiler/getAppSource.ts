@@ -1,16 +1,11 @@
-import { readdir, readFile } from 'fs';
-import { normalize, resolve } from 'path';
-import { promisify } from 'util';
+import { promises as fs } from 'fs';
+import { resolve, relative } from 'path';
 import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
-
 
 import { IAppSource, ICompilerFile, IMapCompilerFile } from '../definition';
 
-const readdirPromise = promisify(readdir);
-const readfilePromise = promisify(readFile);
-
 async function walkDirectory(directory: string): Promise<ICompilerFile[]> {
-    const dirents = await readdirPromise(directory, { withFileTypes: true });
+    const dirents = await fs.readdir(directory, { withFileTypes: true });
     const files = await Promise.all(
         dirents
             .map(async (dirent) => {
@@ -25,7 +20,7 @@ async function walkDirectory(directory: string): Promise<ICompilerFile[]> {
                     return walkDirectory(res);
                 }
 
-                const content = await readfilePromise(res, 'utf8');
+                const content = await fs.readFile(res, 'utf8');
 
                 return {
                     content,
@@ -39,18 +34,12 @@ async function walkDirectory(directory: string): Promise<ICompilerFile[]> {
     return Array.prototype.concat(...files);
 }
 
-function truncateFilename(fileName: string, projectDirectory: string): string {
-    return normalize(fileName).substring(projectDirectory.length + 1);
-}
-
 function filterProjectFiles(projectDirectory: string, directoryWalkData: ICompilerFile[]): ICompilerFile[] {
     return directoryWalkData
         // Leave out falsy values
-        .filter((file: ICompilerFile) => file)
+        .filter((file: ICompilerFile) => file && !file.name.startsWith('.'))
         // Get the file names like it was inside the project's directory
-        .map((file: ICompilerFile) => ({ ...file, name: truncateFilename(file.name, projectDirectory) }))
-        // Files which start with `.` are supposed to be hidden
-        .filter((file: ICompilerFile) => !file.name.startsWith('.'));
+        .map((file: ICompilerFile) => ({ ...file, name: relative(projectDirectory, file.name) }));
 }
 
 function makeICompilerFileMap(compilerFiles: ICompilerFile[]): IMapCompilerFile {
@@ -60,7 +49,7 @@ function makeICompilerFileMap(compilerFiles: ICompilerFile[]): IMapCompilerFile 
 }
 
 function getAppInfo(projectFiles: ICompilerFile[]): IAppInfo {
-    const appJson = projectFiles.filter((file: ICompilerFile) => file.name === 'app.json')[0];
+    const appJson = projectFiles.find((file: ICompilerFile) => file.name === 'app.json');
 
     if (!appJson) {
         throw new Error('There is no app.json file in the project');

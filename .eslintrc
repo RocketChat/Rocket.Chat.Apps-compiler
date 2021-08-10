@@ -51,7 +51,7 @@
                 "@typescript-eslint/ban-ts-ignore": "off",
                 "@typescript-eslint/no-explicit-any": "off",
                 "@typescript-eslint/no-empty-function": "off",
-                "indent": ["error", 4],
+                "indent": ["error", 4, { "SwitchCase": 1 }],
                 "no-useless-constructor": "off",
                 "no-empty-function": "off",
                 "import/order": ["error", {

@@ -4,9 +4,9 @@ import * as fs from 'fs-extra';
 import * as Yazl from 'yazl';
 import glob, { IOptions } from 'glob';
 
-import { FolderDetails } from './folderDetails';
-import { AppsCompiler } from '../AppsCompiler';
-import { ICompilerDescriptor } from '../definition';
+import { FolderDetails } from '../misc/folderDetails';
+import { IBundledCompilerResult, ICompilerDescriptor, ICompilerResult } from '../definition';
+import { isBundled } from '../bundler';
 
 export class AppPackager {
     public static GlobOptions: IOptions = {
@@ -25,9 +25,14 @@ export class AppPackager {
         ],
     };
 
-    private zip: Yazl.ZipFile = new Yazl.ZipFile();
+    private zip = new Yazl.ZipFile();
 
-    constructor(private readonly compilerDesc: ICompilerDescriptor, private fd: FolderDetails, private compiledApp: AppsCompiler, private outputFilename: string) { }
+    constructor(
+        private readonly compilerDesc: ICompilerDescriptor,
+        private fd: FolderDetails,
+        private compilationResult: ICompilerResult | IBundledCompilerResult,
+        private outputFilename: string,
+    ) { }
 
     public async zipItUp(): Promise<string> {
         const zipName = this.outputFilename;
@@ -36,22 +41,21 @@ export class AppPackager {
 
         this.overwriteAppManifest();
 
-        this.zipFromCompiledSource();
+        this.zipFilesFromCompiledSource();
 
         await this.zipSupportFiles();
 
         this.zip.end();
 
-        await this.asyncWriteZip(this.zip, zipName);
+        await this.writeZip(this.zip, zipName);
 
         return zipName;
     }
 
     private overwriteAppManifest(): void {
-        const { AppInterface } = this.compiledApp.appRequire('@rocket.chat/apps-engine/definition/metadata');
-
-        this.fd.info.implements = this.compiledApp.getImplemented()
-            .filter((interfaceName) => !!AppInterface[interfaceName]) as Array<typeof AppInterface>;
+        // At this point, the interface names in the implemented property
+        // have been validated and guaranteed to be correct, so we type cast
+        this.fd.info.implements = this.compilationResult.implemented as any;
 
         fs.writeFileSync(this.fd.infoFile, JSON.stringify(this.fd.info, null, 4));
     }
@@ -87,9 +91,16 @@ export class AppPackager {
             }));
     }
 
-    private zipFromCompiledSource(): void {
-        Object.entries(this.compiledApp.output())
-            .map(([filename, contents]) => this.zip.addBuffer(Buffer.from(contents), filename, { compress: true }));
+    private zipFilesFromCompiledSource(): void {
+        if (isBundled(this.compilationResult)) {
+            this.zip.addBuffer(Buffer.from(this.compilationResult.bundle), this.compilationResult.mainFile.name);
+        } else {
+            Object.entries(this.compilationResult.files)
+                .map(([filename, contents]) => this.zip.addBuffer(
+                    Buffer.from(contents.compiled),
+                    filename,
+                ));
+        }
     }
 
     // tslint:disable-next-line:promise-function-async
@@ -107,10 +118,12 @@ export class AppPackager {
     }
 
     // tslint:disable-next-line:promise-function-async
-    private asyncWriteZip(zip: Yazl.ZipFile, zipName: string): Promise<void> {
-        return new Promise((resolve) => {
+    private writeZip(zip: Yazl.ZipFile, zipName: string): Promise<void> {
+        return new Promise((resolve, reject) => {
             fs.mkdirpSync(path.dirname(zipName));
-            zip.outputStream.pipe(fs.createWriteStream(zipName)).on('close', resolve);
+            zip.outputStream.pipe(fs.createWriteStream(zipName))
+                .on('close', resolve)
+                .on('error', reject);
         });
     }
 }
