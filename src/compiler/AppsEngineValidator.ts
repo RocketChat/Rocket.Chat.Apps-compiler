@@ -100,7 +100,7 @@ export class AppsEngineValidator {
                     return undefined;
                 }
 
-                filepath = path.normalize(`${ path.dirname(filename) }/${ filepath }`);
+                filepath = path.normalize(path.join(path.dirname(filename), filepath));
 
                 // Handles import of other files in app's source
                 if (compilationResult.files[filepath.endsWith('.js') ? filepath : `${ filepath }.js`]) {
