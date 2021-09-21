@@ -1,5 +1,7 @@
+import { EventEmitter } from 'events';
 import fs from 'fs';
 import path from 'path';
+
 import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
 import {
     CompilerOptions,
@@ -16,7 +18,6 @@ import { normalizeDiagnostics } from '../misc/normalizeDiagnostics';
 import { Utilities } from '../misc/Utilities';
 import { AppsEngineValidator } from './AppsEngineValidator';
 import logger from '../misc/logger';
-import { EventEmitter } from 'events';
 
 export class TypescriptCompiler {
     private readonly compilerOptions: CompilerOptions;
@@ -86,13 +87,13 @@ export class TypescriptCompiler {
                 case 'external':
                     if (!hasExternalDependencies) {
                         hasExternalDependencies = true;
-                        logger.warn(`App has external module(s) as dependency`);
+                        logger.warn('App has external module(s) as dependency');
                     }
                     break;
                 case 'native':
                     if (!hasNativeDependencies) {
                         hasNativeDependencies = true;
-                        logger.warn(`App has native module(s) as dependency`);
+                        logger.warn('App has native module(s) as dependency');
                     }
                     break;
                 default:
@@ -209,7 +210,7 @@ export class TypescriptCompiler {
         containingFile: string,
         result: ICompilerResult,
         moduleResHost: ModuleResolutionHost,
-        dependencyCheck: EventEmitter
+        dependencyCheck: EventEmitter,
     ): number {
         // Keep compatibility with apps importing apps-ts-definition
         moduleName = moduleName.replace(/@rocket.chat\/apps-ts-definition\//, '@rocket.chat/apps-engine/definition/');
@@ -232,7 +233,7 @@ export class TypescriptCompiler {
         // Now, let's try the "standard" resolution but with our little twist on it
         const rs = this.ts.resolveModuleName(moduleName, containingFile, this.compilerOptions, moduleResHost);
         if (rs.resolvedModule) {
-            if (rs.resolvedModule.isExternalLibraryImport && rs.resolvedModule.packageId && rs.resolvedModule.packageId.name != '@rocket.chat/apps-engine') {
+            if (rs.resolvedModule.isExternalLibraryImport && rs.resolvedModule.packageId && rs.resolvedModule.packageId.name !== '@rocket.chat/apps-engine') {
                 dependencyCheck.emit('dependencyCheck', 'external');
             }
 
