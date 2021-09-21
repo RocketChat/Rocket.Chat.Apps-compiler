@@ -13,6 +13,7 @@ enum AllowedInternalModules {
     http,
     https,
     zlib,
+    util,
     os
 }
 
