@@ -6,16 +6,12 @@ import path from 'path';
 
 import * as TS from 'typescript';
 
+import log from './misc/logger';
+
 import { AppsCompiler } from '.';
 import { CompilerFileNotFoundError, ICompilerDescriptor, ICompilerResult } from './definition';
 
 const { promises: fs, constants: { R_OK: READ_ACCESS } } = require('fs');
-
-const log = require('simple-node-logger').createSimpleLogger({
-    timestampFormat: 'YYYY-MM-DD HH:mm:ss.SSS',
-});
-
-log.setLevel(process.env.LOG_LEVEL || 'info');
 
 export async function compile(compilerDesc: ICompilerDescriptor, sourceDir: string, outputFile: string): Promise<ICompilerResult> {
     sourceDir = path.resolve(sourceDir);

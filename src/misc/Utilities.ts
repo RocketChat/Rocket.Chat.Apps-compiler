@@ -10,6 +10,10 @@ enum AllowedInternalModules {
     events,
     stream,
     net,
+    http,
+    https,
+    zlib,
+    os
 }
 
 export class Utilities {
