@@ -7,6 +7,7 @@ import glob, { IOptions } from 'glob';
 import { FolderDetails } from '../misc/folderDetails';
 import { IBundledCompilerResult, ICompilerDescriptor, ICompilerResult } from '../definition';
 import { isBundled } from '../bundler';
+import logger from '../misc/logger';
 
 export class AppPackager {
     public static GlobOptions: IOptions = {
@@ -75,6 +76,10 @@ export class AppPackager {
             throw new Error('No files to package were found');
         }
 
+        if (!this.isFilePresent(matches, 'package-lock.json')) {
+            logger.warn('No package-lock.json found');
+        }
+
         await Promise.all(
             matches.map(async (realPath) => {
                 const zipPath = path.relative(this.fd.folder, realPath);
@@ -125,5 +130,10 @@ export class AppPackager {
                 .on('close', resolve)
                 .on('error', reject);
         });
+    }
+
+    private isFilePresent(fileList: Array<string>, fileName: string): boolean {
+        const targetFilePath = path.join(this.fd.folder, fileName);
+        return fileList.includes(targetFilePath);
     }
 }

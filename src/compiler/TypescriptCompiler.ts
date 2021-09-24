@@ -1,5 +1,7 @@
+import { EventEmitter } from 'events';
 import fs from 'fs';
 import path from 'path';
+
 import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
 import {
     CompilerOptions,
@@ -15,6 +17,7 @@ import { IAppSource, ICompilerDiagnostic, ICompilerFile, ICompilerResult, IMapCo
 import { normalizeDiagnostics } from '../misc/normalizeDiagnostics';
 import { Utilities } from '../misc/Utilities';
 import { AppsEngineValidator } from './AppsEngineValidator';
+import logger from '../misc/logger';
 
 export class TypescriptCompiler {
     private readonly compilerOptions: CompilerOptions;
@@ -75,6 +78,29 @@ export class TypescriptCompiler {
             result.files[key].name = path.normalize(result.files[key].name);
         });
 
+        let hasExternalDependencies = false;
+        let hasNativeDependencies = false;
+        const dependencyCheck = new EventEmitter();
+
+        dependencyCheck.on('dependencyCheck', (dependencyType) => {
+            switch (dependencyType) {
+                case 'external':
+                    if (!hasExternalDependencies) {
+                        hasExternalDependencies = true;
+                        logger.warn('App has external module(s) as dependency');
+                    }
+                    break;
+                case 'native':
+                    if (!hasNativeDependencies) {
+                        hasNativeDependencies = true;
+                        logger.warn('App has native module(s) as dependency');
+                    }
+                    break;
+                default:
+                    break;
+            }
+        });
+
         const modulesNotFound: ICompilerDiagnostic[] = [];
         const host = {
             getScriptFileNames: () => Object.keys(result.files),
@@ -105,7 +131,7 @@ export class TypescriptCompiler {
                 };
 
                 for (const moduleName of moduleNames) {
-                    const index = this.resolver(moduleName, resolvedModules, containingFile, result, moduleResHost);
+                    const index = this.resolver(moduleName, resolvedModules, containingFile, result, moduleResHost, dependencyCheck);
 
                     if (index === -1) {
                         modulesNotFound.push({
@@ -184,6 +210,7 @@ export class TypescriptCompiler {
         containingFile: string,
         result: ICompilerResult,
         moduleResHost: ModuleResolutionHost,
+        dependencyCheck: EventEmitter,
     ): number {
         // Keep compatibility with apps importing apps-ts-definition
         moduleName = moduleName.replace(/@rocket.chat\/apps-ts-definition\//, '@rocket.chat/apps-engine/definition/');
@@ -194,6 +221,7 @@ export class TypescriptCompiler {
         }
 
         if (Utilities.allowedInternalModuleRequire(moduleName)) {
+            dependencyCheck.emit('dependencyCheck', 'native');
             return resolvedModules.push({ resolvedFileName: `${ moduleName }.js` });
         }
 
@@ -205,6 +233,10 @@ export class TypescriptCompiler {
         // Now, let's try the "standard" resolution but with our little twist on it
         const rs = this.ts.resolveModuleName(moduleName, containingFile, this.compilerOptions, moduleResHost);
         if (rs.resolvedModule) {
+            if (rs.resolvedModule.isExternalLibraryImport && rs.resolvedModule.packageId && rs.resolvedModule.packageId.name !== '@rocket.chat/apps-engine') {
+                dependencyCheck.emit('dependencyCheck', 'external');
+            }
+
             return resolvedModules.push(rs.resolvedModule);
         }
 

@@ -18,6 +18,9 @@ export async function bundleCompilation(r: ICompilerResult, validator: AppsEngin
         minify: true,
         platform: 'node',
         target: ['node10'],
+        define: {
+            'global.Promise': 'Promise',
+        },
         external: [
             '@rocket.chat/apps-engine/*',
         ],

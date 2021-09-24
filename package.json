@@ -49,7 +49,7 @@
         "ts-node": "^9.1.1"
     },
     "dependencies": {
-        "@rocket.chat/apps-engine": "^1.22.2",
+        "@rocket.chat/apps-engine": "^1.28.0-alpha.5428",
         "esbuild": "^0.12.16",
         "figures": "^3.0.0",
         "fs-extra": "^8.1.0",
