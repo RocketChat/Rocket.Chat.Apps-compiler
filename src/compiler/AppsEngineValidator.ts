@@ -112,6 +112,21 @@ export class AppsEngineValidator {
 
         const result = vm.runInContext(compilationResult.files[`${ filename }.js` as keyof ICompilerResult['files']].compiled, context);
 
-        return result || exports;
+        /**
+          * `result` will contain the ONLY the result of the last line evaluated
+          * in the script by `vm.runInContext`, and NOT the full `exports` object.
+          *
+          * However, we need to handle this case due to backwards compatibility,
+          * since the main class file might export a class with an unknown name,
+          * which was supported in the early versions of the Apps-Engine.
+          *
+          * So here, if we find that the required file exports ONLY ONE property,
+          * which is what happens in the case of the main class file, we can return
+          * the `result`; otherwise, we return the full `exports` object.
+          */
+        if (Object.keys(exports).length === 1) {
+            return result;
+        }
+        return exports;
     }
 }
