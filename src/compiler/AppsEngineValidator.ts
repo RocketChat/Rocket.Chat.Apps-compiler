@@ -113,7 +113,7 @@ export class AppsEngineValidator {
         const result = vm.runInContext(compilationResult.files[`${ filename }.js` as keyof ICompilerResult['files']].compiled, context);
 
         /**
-          * `result` will contain the ONLY the result of the last line evaluated
+          * `result` will contain ONLY the result of the last line evaluated
           * in the script by `vm.runInContext`, and NOT the full `exports` object.
           *
           * However, we need to handle this case due to backwards compatibility,
