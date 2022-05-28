@@ -52,7 +52,7 @@
         "@rocket.chat/apps-engine": "^1.28.0-alpha.5428",
         "esbuild": "^0.12.16",
         "figures": "^3.0.0",
-        "fs-extra": "^8.1.0",
+        "fs-extra": "^9.0.0",
         "glob": "^7.1.4",
         "lodash.clonedeep": "^4.5.0",
         "simple-node-logger": "^18.12.24",
