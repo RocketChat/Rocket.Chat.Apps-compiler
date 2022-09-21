@@ -39,11 +39,19 @@ export async function bundleCompilation(r: ICompilerResult, validator: AppsEngin
                         }
 
                         const modulePath = normalizeAppModulePath(args.path, args.importer);
+                        
+                        /**
+                         * Replace file key, and find for file in `ts` file list.
+                         * Files: [..., "endpoints\\SendMessageAsAppUserEndpoint.js"]
+                         * ModulePath: ":\\endpoints\\SendMessageAsAppUserEndpoint.js"
+                         */
+                        const modulePathReplaced = modulePath.replace(":\\", "")
+                        const hasFile = !!r.files[modulePathReplaced]
 
-                        if (r.files[modulePath]) {
+                        if (hasFile) {
                             return {
                                 namespace: 'app-source',
-                                path: modulePath,
+                                path: modulePathReplaced,
                             };
                         }
 
