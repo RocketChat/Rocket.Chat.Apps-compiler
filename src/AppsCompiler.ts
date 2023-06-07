@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import * as fallbackTypescript from 'typescript';
 
 import { createRequire } from 'module';
@@ -26,7 +27,7 @@ export class AppsCompiler {
         private readonly sourcePath: string,
         ts: TypeScript = fallbackTypescript,
     ) {
-        this.validator = new AppsEngineValidator(createRequire(`${ sourcePath }/app.json`));
+        this.validator = new AppsEngineValidator(createRequire(path.join(sourcePath, 'app.json')));
 
         this.typescriptCompiler = new TypescriptCompiler(sourcePath, ts, this.validator);
         this.bundler = getBundler(AvailableBundlers.esbuild);
