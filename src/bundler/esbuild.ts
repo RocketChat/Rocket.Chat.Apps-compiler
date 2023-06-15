@@ -1,3 +1,4 @@
+import * as os from 'os';
 import path from 'path';
 import { build, OnLoadArgs, OnResolveArgs, PluginBuild } from 'esbuild';
 
@@ -5,9 +6,13 @@ import { ICompilerResult } from '../definition';
 import { IBundledCompilerResult } from '../definition/ICompilerResult';
 import { AppsEngineValidator } from '../compiler/AppsEngineValidator';
 
+const isWin = os.platform() === 'win32';
+
 function normalizeAppModulePath(modulePath: string, parentDir: string): string {
     return /\.\.?\//.test(modulePath)
-        ? path.resolve('/', path.dirname(parentDir), modulePath).substring(1).concat('.js')
+        ? isWin
+            ? path.join(path.dirname(parentDir), modulePath).concat('.js')
+            : path.resolve('/', path.dirname(parentDir), modulePath).substring(1).concat('.js')
         : modulePath;
 }
 
@@ -53,6 +58,17 @@ export async function bundleCompilation(r: ICompilerResult, validator: AppsEngin
                                 namespace: 'app-source',
                                 path: modulePathReplaced,
                             };
+                        }
+
+                        if (/\.\.?\//.test(args.path)) {
+                            const indexModulePath = modulePath.replace(/\.js$/, `${ path.sep }index.js`);
+
+                            if (r.files[indexModulePath]) {
+                                return {
+                                    namespace: 'app-source',
+                                    path: indexModulePath,
+                                };
+                            }
                         }
 
                         const nodeModulePath = validator.resolveAppDependencyPath(args.path);
