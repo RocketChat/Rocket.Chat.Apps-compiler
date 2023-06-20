@@ -19,6 +19,8 @@ import { Utilities } from '../misc/Utilities';
 import { AppsEngineValidator } from './AppsEngineValidator';
 import logger from '../misc/logger';
 
+let ORDER_COUNTER = 0;
+
 export class TypescriptCompiler {
     private readonly compilerOptions: CompilerOptions;
 
@@ -101,9 +103,11 @@ export class TypescriptCompiler {
             }
         });
 
+        console.log(++ORDER_COUNTER, 'TRANSPILE SOURCE', Object.keys(result.files));
+
         const modulesNotFound: ICompilerDiagnostic[] = [];
         const host = {
-            getScriptFileNames: () => Object.keys(result.files),
+            getScriptFileNames: () => Object.keys(result.files).reverse(),
             getScriptVersion: (fileName) => {
                 fileName = path.normalize(fileName);
                 const file = result.files[fileName] || this.getLibraryFile(fileName);
@@ -112,6 +116,9 @@ export class TypescriptCompiler {
             getScriptSnapshot: (fileName) => {
                 fileName = path.normalize(fileName);
                 const file = result.files[fileName] || this.getLibraryFile(fileName);
+
+                // !fileName.includes('node_module') &&
+                console.log(++ORDER_COUNTER, 'GET SCRIPT SNAPSHOT', { fileName, file: !!file });
 
                 if (!file || !file.content) {
                     return;
@@ -122,9 +129,16 @@ export class TypescriptCompiler {
             getCompilationSettings: () => this.compilerOptions,
             getCurrentDirectory: () => this.sourcePath,
             getDefaultLibFileName: () => this.ts.getDefaultLibFilePath(this.compilerOptions),
-            fileExists: (fileName: string): boolean => this.ts.sys.fileExists(fileName),
-            readFile: (fileName: string): string | undefined => this.ts.sys.readFile(fileName),
+            fileExists: (fileName: string): boolean => {
+                fileName.includes(process.env.DEBUG_FILE) && console.log(++ORDER_COUNTER, 'FILE EXISTS', fileName, this.ts.sys.fileExists(fileName));
+                return this.ts.sys.fileExists(fileName);
+            },
+            readFile: (fileName: string): string | undefined => {
+                fileName.includes(process.env.DEBUG_FILE) && console.log(++ORDER_COUNTER, 'READ FILE', fileName, !!this.ts.sys.readFile(fileName));
+                return this.ts.sys.readFile(fileName);
+            },
             resolveModuleNames: (moduleNames: Array<string>, containingFile: string): Array<ResolvedModule> => {
+                console.log(++ORDER_COUNTER, 'RESOLVE MODULE NAMES', { containingFile });
                 const resolvedModules: ResolvedModule[] = [];
                 const moduleResHost: ModuleResolutionHost = {
                     fileExists: host.fileExists, readFile: host.readFile, trace: (traceDetail) => console.log(traceDetail),
@@ -143,6 +157,11 @@ export class TypescriptCompiler {
                             originalMessage: `Module not found: ${ moduleName }`,
                             originalDiagnostic: undefined,
                         });
+                    }
+
+                    if (moduleName.includes(process.env.DEBUG_FILE)) {
+                        const ex = moduleResHost.fileExists(resolvedModules[index - 1].resolvedFileName);
+                        console.log(++ORDER_COUNTER, 'RESOLVE MODULE NAMES', { moduleName, index, ex, res: resolvedModules[index - 1] });
                     }
                 }
 
@@ -230,8 +249,11 @@ export class TypescriptCompiler {
             return resolvedModules.push({ resolvedFileName: resolvedPath });
         }
 
+        moduleName.includes(process.env.DEBUG_FILE) && console.log(++ORDER_COUNTER, 'RESOLVING', { moduleName, resolvedPath });
+
         // Now, let's try the "standard" resolution but with our little twist on it
         const rs = this.ts.resolveModuleName(moduleName, containingFile, this.compilerOptions, moduleResHost);
+
         if (rs.resolvedModule) {
             if (rs.resolvedModule.isExternalLibraryImport && rs.resolvedModule.packageId && rs.resolvedModule.packageId.name !== '@rocket.chat/apps-engine') {
                 dependencyCheck.emit('dependencyCheck', 'external');
@@ -244,11 +266,17 @@ export class TypescriptCompiler {
     }
 
     private resolvePath(containingFile: string, moduleName: string): string {
-        const currentFolderPath = path.dirname(containingFile).replace(this.sourcePath.replace(/\/$/, ''), '');
-        const modulePath = path.join(currentFolderPath, moduleName);
+        // @TODO maybe?
+        const currentFolderPath = path.dirname(containingFile).replace(this.sourcePath.replace(new RegExp(`${ path.sep }$`), ''), '');
+        const modulePath = path.join(currentFolderPath, moduleName.replace(/\//g, path.sep));
+
+
+        // moduleName.includes(process.env.DEBUG_FILE||'') && console.log('RESOLVE PATH', { currentFolderPath, modulePath });
 
         // Let's ensure we search for the App's modules first
         const transformedModule = Utilities.transformModuleForCustomRequire(modulePath);
+
+        moduleName.includes(process.env.DEBUG_FILE) && console.log(++ORDER_COUNTER, 'RESOLVE PATH', { moduleName, currentFolderPath, modulePath, transformedModule });
         if (transformedModule) {
             return transformedModule;
         }
