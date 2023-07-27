@@ -20,6 +20,8 @@ import { AppsEngineValidator } from './AppsEngineValidator';
 import logger from '../misc/logger';
 
 export class TypescriptCompiler {
+    private readonly nonConfigurableCompilerOptions: CompilerOptions;
+
     private readonly compilerOptions: CompilerOptions;
 
     private libraryFiles: IMapCompilerFile;
@@ -29,10 +31,16 @@ export class TypescriptCompiler {
         private readonly ts: TypeScript,
         private readonly appValidator: AppsEngineValidator,
     ) {
-        this.compilerOptions = {
+        // Things we shouldn't allow the app dev changing
+        this.nonConfigurableCompilerOptions = {
             target: this.ts.ScriptTarget.ES2017,
             module: this.ts.ModuleKind.CommonJS,
             moduleResolution: this.ts.ModuleResolutionKind.NodeJs,
+        };
+
+        this.compilerOptions = {
+            ...this.nonConfigurableCompilerOptions,
+            skipLibCheck: true,
             declaration: false,
             noImplicitAny: false,
             removeComments: true,
@@ -46,6 +54,10 @@ export class TypescriptCompiler {
         };
 
         this.libraryFiles = {};
+    }
+
+    public setCompilerOptions(options: CompilerOptions): void {
+        Object.assign(this.compilerOptions, options, this.nonConfigurableCompilerOptions);
     }
 
     public transpileSource({ appInfo, sourceFiles: files }: IAppSource): ICompilerResult {
