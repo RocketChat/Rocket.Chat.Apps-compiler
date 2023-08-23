@@ -16,8 +16,8 @@ export type TypeScript = typeof fallbackTypescript;
 
 export type AppCompilerOptions = {
     /**
-    /* Indicates whether the AppCompiler should take into
-    /* account the .tsconfig file when compiling the app
+     * Indicates whether the AppCompiler should take into
+     * account the .tsconfig file when compiling the app
      */
     readTsProjectFile?: boolean;
 };
