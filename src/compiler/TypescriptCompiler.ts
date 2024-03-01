@@ -225,6 +225,16 @@ export class TypescriptCompiler {
             return resolvedModules.push({ resolvedFileName: `${ moduleName }.js` });
         }
 
+        const resolvedWithIndex = this.resolvePath(
+            containingFile,
+            `${ moduleName }/index`,
+        );
+        if (result.files[resolvedWithIndex]) {
+            return resolvedModules.push({
+                resolvedFileName: resolvedWithIndex,
+            });
+        }
+
         const resolvedPath = this.resolvePath(containingFile, moduleName);
         if (result.files[resolvedPath]) {
             return resolvedModules.push({ resolvedFileName: resolvedPath });
