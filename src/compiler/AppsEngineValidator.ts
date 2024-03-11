@@ -55,6 +55,8 @@ export class AppsEngineValidator {
         const { App: EngineBaseApp } = this.appSourceRequire('@rocket.chat/apps-engine/definition/App');
         const mainClassModule = this.compiledRequire(mainClassFile, compilationResult);
 
+        // if the main class is default export use that,
+        // else take it from the object { [mainClassFile]: Class }
         const RealApp = typeof mainClassModule === 'function'
             ? mainClassModule
             : mainClassModule.default
@@ -110,23 +112,14 @@ export class AppsEngineValidator {
             exports,
         });
 
-        const result = vm.runInContext(compilationResult.files[`${ filename }.js` as keyof ICompilerResult['files']].compiled, context);
+        vm.runInContext(compilationResult.files[`${ filename }.js` as keyof ICompilerResult['files']].compiled, context);
 
         /**
-          * `result` will contain ONLY the result of the last line evaluated
-          * in the script by `vm.runInContext`, and NOT the full `exports` object.
-          *
-          * However, we need to handle this case due to backwards compatibility,
-          * since the main class file might export a class with an unknown name,
-          * which was supported in the early versions of the Apps-Engine.
-          *
-          * So here, if we find that the required file exports ONLY ONE property,
-          * which is what happens in the case of the main class file, we can return
-          * the `result`; otherwise, we return the full `exports` object.
+          * exports will always contain everything
+          * for result = vm.runInContext(...), result == Object.values(exports)[0] or exports[filename]
+          * since compiledRequired is not classFile only method (called recursively), better to return all exports
+          * and extract the main class constructor in the checkInheritance method.
           */
-        if (Object.keys(exports).length === 1) {
-            return result;
-        }
         return exports;
     }
 }
