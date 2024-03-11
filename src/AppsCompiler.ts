@@ -10,8 +10,22 @@ import { AppPackager } from './packager';
 import { TypescriptCompiler } from './compiler/TypescriptCompiler';
 import { AppsEngineValidator } from './compiler/AppsEngineValidator';
 import getBundler, { AvailableBundlers, BundlerFunction } from './bundler';
+import logger from './misc/logger';
 
 export type TypeScript = typeof fallbackTypescript;
+
+export type AppCompilerOptions = {
+    /**
+     * Indicates whether the AppCompiler should take into
+     * account the .tsconfig file when compiling the app
+     */
+    readTsProjectFile?: boolean;
+};
+
+const defaultOptions: AppCompilerOptions = {
+    // Default to false for compatibility
+    readTsProjectFile: false,
+};
 
 export class AppsCompiler {
     private compilationResult?: ICompilerResult;
@@ -26,6 +40,7 @@ export class AppsCompiler {
         private readonly compilerDesc: ICompilerDescriptor,
         private readonly sourcePath: string,
         ts: TypeScript = fallbackTypescript,
+        private readonly options = defaultOptions,
     ) {
         this.validator = new AppsEngineValidator(createRequire(path.join(sourcePath, 'app.json')));
 
@@ -45,7 +60,11 @@ export class AppsCompiler {
     }
 
     public async compile(): Promise<ICompilerResult> {
-        const source = await getAppSource(this.sourcePath);
+        const source = await getAppSource(this.sourcePath, this.options);
+
+        if (source.compilerOptions) {
+            this.typescriptCompiler.setCompilerOptions(source.compilerOptions);
+        }
 
         this.compilationResult = this.typescriptCompiler.transpileSource(source);
 
@@ -65,7 +84,7 @@ export class AppsCompiler {
             // @NOTE this is important for generating the zip file with the correct name
             await fd.readInfoFile();
         } catch (e) {
-            console.error(e && e.message ? e.message : e);
+            logger.error(e && e.message ? e.message : e);
             return;
         }
 
