@@ -1,7 +1,7 @@
 import { Diagnostic, flattenDiagnosticMessageText } from 'typescript';
 import { ICompilerDiagnostic } from '../definition';
 
-export function normalizeDiagnostics(diagnostics: Diagnostic[]): Array<ICompilerDiagnostic> {
+export function normalizeDiagnostics(diagnostics: readonly Diagnostic[]): Array<ICompilerDiagnostic> {
     return diagnostics.map((diag) => {
         const message = flattenDiagnosticMessageText(diag.messageText, '\n');
 
