@@ -30,7 +30,7 @@
     },
     "homepage": "https://github.com/RocketChat/Rocket.Chat.Apps-compiler#readme",
     "devDependencies": {
-        "@rocket.chat/eslint-config": "^0.7.0",
+        "@rocket.chat/eslint-config": "^0.4.0",
         "@types/chai": "^4.2.12",
         "@types/fs-extra": "^8.0.0",
         "@types/glob": "^7.1.1",
@@ -43,13 +43,13 @@
         "@typescript-eslint/parser": "^3.7.1",
         "babel-eslint": "^10.1.0",
         "chai": "^4.2.0",
-        "eslint": "^7.9.0",
+        "eslint": "^6.0.0",
         "husky": "^4.2.5",
         "mocha": "^8.0.1",
         "ts-node": "^9.1.1"
     },
     "dependencies": {
-        "@rocket.chat/apps-engine": "^1.48.0-alpha",
+        "@rocket.chat/apps-engine": "^1.48.0",
         "esbuild": "^0.12.16",
         "figures": "^3.0.0",
         "fs-extra": "^8.1.0",
@@ -57,7 +57,7 @@
         "lodash.clonedeep": "^4.5.0",
         "simple-node-logger": "^18.12.24",
         "tv4": "^1.3.0",
-        "typescript": "^5.0.0",
+        "typescript": "^2.9.2",
         "yazl": "^2.5.1"
     },
     "husky": {
