@@ -54,7 +54,12 @@ export class TscBasedCompiler {
         }
 
         // 5) Generate a temporary tsconfig
-        const tsconfig = {
+        const nonConfigurableCompilerOptions = {
+            module: "CommonJS",
+            moduleResolution: "node",
+        };
+
+        let tsconfig = {
             compilerOptions: {
                 target: "ES2020",
                 module: "commonjs",
@@ -67,6 +72,44 @@ export class TscBasedCompiler {
             include: Object.values(sourceFiles).map((f) => f.name),
             exclude: ["node_modules"],
         };
+
+        // read App's tsconfig.json if present
+        const appTsconfigPath = path.join(this.sourcePath, "tsconfig.json");
+        try {
+            logger.debug(`Reading app's tsconfig.json from ${appTsconfigPath}`);
+            const configContent = await fs.readFile(appTsconfigPath, "utf8");
+            const parsed = TS.parseConfigFileTextToJson(
+                appTsconfigPath,
+                configContent
+            );
+
+            // merge with our own config
+            const appTsconfigJson = parsed.config;
+            const mergedConfig = {
+                ...tsconfig,
+                ...appTsconfigJson,
+                compilerOptions: {
+                    ...tsconfig.compilerOptions,
+                    ...appTsconfigJson.compilerOptions,
+                    ...nonConfigurableCompilerOptions,
+                },
+            };
+
+            tsconfig = mergedConfig;
+            logger.debug(
+                `Merged app's tsconfig.json with our own config: ${JSON.stringify(
+                    tsconfig,
+                    null,
+                    2
+                )}`
+            );
+        } catch (err) {
+            // ignore errors, we will use our own config
+            logger.debug(
+                `No app tsconfig.json found, using default config: ${err}`
+            );
+        }
+
         const tsconfigPath = path.join(this.sourcePath, "tsconfig.temp.json");
         await fs.writeFile(
             tsconfigPath,
