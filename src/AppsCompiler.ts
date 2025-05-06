@@ -11,7 +11,6 @@ import {
 } from "./definition";
 import { FolderDetails } from "./misc/folderDetails";
 import { AppPackager } from "./packager";
-// import { TypescriptCompiler } from "./compiler/TypescriptCompiler";
 import { AppsEngineValidator } from "./compiler/AppsEngineValidator";
 import getBundler, { AvailableBundlers, BundlerFunction } from "./bundler";
 import { TscBasedCompiler } from "./compiler/TscBasedCompiler";
