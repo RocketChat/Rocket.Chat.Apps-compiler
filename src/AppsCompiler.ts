@@ -35,7 +35,6 @@ export class AppsCompiler {
             createRequire(path.join(sourcePath, "app.json"))
         );
 
-        // this.typescriptCompiler = new TypescriptCompiler(sourcePath, ts, this.validator);
         this.typescriptCompiler = new TscBasedCompiler(
             sourcePath,
             this.validator
