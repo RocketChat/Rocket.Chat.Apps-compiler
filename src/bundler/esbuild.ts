@@ -98,6 +98,13 @@ export async function bundleCompilation(
                                     );
                             } catch {
                                 // resolution failed
+                                return {
+                                    errors: [
+                                        {
+                                            text: `Cannot find app dependency "${args.path}"`,
+                                        },
+                                    ],
+                                };
                             }
 
                             if (
