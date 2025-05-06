@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 import { createRequire } from "module";
 import path from "path";
 import util from "util";
@@ -10,7 +9,6 @@ import {
     IAppSource,
     ICompilerResult,
     ICompilerDiagnostic,
-    // ICompilerFile,
 } from "../definition";
 import { AppsEngineValidator } from "./AppsEngineValidator";
 import logger from "../misc/logger";
