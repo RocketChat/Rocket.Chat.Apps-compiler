@@ -35,7 +35,7 @@ export class AppsCompiler {
         private readonly compilerDesc: ICompilerDescriptor,
         private readonly sourcePath: string,
         ts: TypeScript = fallbackTypescript,
-        useNativeCompiler = false,
+        useNativeCompiler: boolean,
     ) {
         this.validator = new AppsEngineValidator(
             createRequire(path.join(sourcePath, 'app.json')),

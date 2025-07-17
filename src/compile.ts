@@ -13,7 +13,7 @@ import { CompilerFileNotFoundError, ICompilerDescriptor, ICompilerResult } from 
 
 const { promises: fs, constants: { R_OK: READ_ACCESS } } = require('fs');
 
-export async function compile(compilerDesc: ICompilerDescriptor, sourceDir: string, outputFile: string): Promise<ICompilerResult> {
+export async function compile(compilerDesc: ICompilerDescriptor, sourceDir: string, outputFile: string, useNativeCompiler = false): Promise<ICompilerResult> {
     sourceDir = path.resolve(sourceDir);
     outputFile = path.resolve(outputFile);
 
@@ -45,7 +45,7 @@ export async function compile(compilerDesc: ICompilerDescriptor, sourceDir: stri
     }
 
     try {
-        const compiler = new AppsCompiler(compilerDesc, sourceDir, appTs);
+        const compiler = new AppsCompiler(compilerDesc, sourceDir, appTs, useNativeCompiler);
 
         logger.debug('Starting compilation...');
 
