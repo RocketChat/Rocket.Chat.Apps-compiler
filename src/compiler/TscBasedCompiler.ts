@@ -140,7 +140,7 @@ export class TscBasedCompiler {
                     cwd: this.sourcePath,
                 },
             );
-        } catch (err: any) {
+        } catch (err) {
             // on failure, return a single diagnostic with the raw tsc output
             const msg = err.stderr || err.stdout || err.message;
             const diagnostic: ICompilerDiagnostic = {
