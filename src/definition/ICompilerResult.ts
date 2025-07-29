@@ -1,6 +1,6 @@
-import { IPermission } from '@rocket.chat/apps-engine/definition/permissions/IPermission';
-import { ICompilerDiagnostic } from './ICompilerDiagnostic';
-import { ICompilerFile } from './ICompilerFile';
+import type { IPermission } from "@rocket.chat/apps-engine/definition/permissions/IPermission";
+import type { ICompilerDiagnostic } from "./ICompilerDiagnostic";
+import type { ICompilerFile } from "./ICompilerFile";
 
 export interface ICompilerResult {
     files: { [s: string]: ICompilerFile };

@@ -1,20 +1,21 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as fallbackTypescript from 'typescript';
+import * as fs from "fs";
+import * as path from "path";
+import * as fallbackTypescript from "typescript";
 
-import { createRequire } from 'module';
-import { getAppSource } from './compiler/getAppSource';
-import {
+import { createRequire } from "module";
+import { getAppSource } from "./compiler/getAppSource";
+import type {
     IBundledCompilerResult,
     ICompilerDescriptor,
     ICompilerResult,
-} from './definition';
-import { FolderDetails } from './misc/folderDetails';
-import { AppPackager } from './packager';
-import { AppsEngineValidator } from './compiler/AppsEngineValidator';
-import getBundler, { AvailableBundlers, BundlerFunction } from './bundler';
-import { TscBasedCompiler } from './compiler/TscBasedCompiler';
-import { TypescriptCompiler } from './compiler/TypescriptCompiler';
+} from "./definition";
+import { FolderDetails } from "./misc/folderDetails";
+import { AppPackager } from "./packager";
+import { AppsEngineValidator } from "./compiler/AppsEngineValidator";
+import type { BundlerFunction } from "./bundler";
+import getBundler, { AvailableBundlers } from "./bundler";
+import { TscBasedCompiler } from "./compiler/TscBasedCompiler";
+import { TypescriptCompiler } from "./compiler/TypescriptCompiler";
 
 export type TypeScript = typeof fallbackTypescript;
 
@@ -38,7 +39,7 @@ export class AppsCompiler {
         useNativeCompiler = false,
     ) {
         this.validator = new AppsEngineValidator(
-            createRequire(path.join(sourcePath, 'app.json')),
+            createRequire(path.join(sourcePath, "app.json")),
         );
 
         this.typescriptCompiler = new TypescriptCompiler(
@@ -73,9 +74,7 @@ export class AppsCompiler {
     public async compile(): Promise<ICompilerResult> {
         const source = await getAppSource(this.sourcePath);
 
-        this.compilationResult = await this.transpiler.transpileSource(
-            source,
-        );
+        this.compilationResult = await this.transpiler.transpileSource(source);
 
         return this.getLatestCompilationResult();
     }
@@ -103,7 +102,7 @@ export class AppsCompiler {
         const compilationResult = this.getLatestCompilationResult();
 
         if (!compilationResult) {
-            throw new Error('No compilation data found');
+            throw new Error("No compilation data found");
         }
 
         const packager = new AppPackager(

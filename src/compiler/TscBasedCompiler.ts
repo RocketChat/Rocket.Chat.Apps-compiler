@@ -1,29 +1,29 @@
 /* eslint-disable no-await-in-loop */
-import { createRequire } from 'module';
-import path from 'path';
-import util from 'util';
-import * as TS from 'typescript';
-import { promises as fs } from 'fs';
-import { execFile } from 'child_process';
+import { createRequire } from "module";
+import path from "path";
+import util from "util";
+import * as TS from "typescript";
+import { promises as fs } from "fs";
+import { execFile } from "child_process";
 
-import {
+import type {
     IAppSource,
     ICompilerResult,
     ICompilerDiagnostic,
-} from '../definition';
-import { AppsEngineValidator } from './AppsEngineValidator';
-import logger from '../misc/logger';
+} from "../definition";
+import type { AppsEngineValidator } from "./AppsEngineValidator";
+import logger from "../misc/logger";
 
 const execFileAsync = util.promisify(execFile);
 
 // we compile into this private folder instead of "dist"
-const BUILD_DIR = '.rc_build';
+const BUILD_DIR = ".rc_build";
 // name of the generated tsconfig
-const TEMP_TSCONFIG = 'tsconfig.rc.json';
+const TEMP_TSCONFIG = "tsconfig.rc.json";
 // options we force—module, resolution, outDir must stay under our control
 const NON_CONFIGURABLE = {
-    module: 'commonjs',
-    moduleResolution: 'node',
+    module: "commonjs",
+    moduleResolution: "node",
     outDir: BUILD_DIR,
 };
 
@@ -42,7 +42,7 @@ export class TscBasedCompiler {
         // Entry‐file must exist
         if (!appInfo.classFile || !sourceFiles[appInfo.classFile]) {
             throw new Error(
-                `Invalid App package. Could not find the classFile (${ appInfo.classFile }).`,
+                `Invalid App package. Could not find the classFile (${appInfo.classFile}).`,
             );
         }
 
@@ -52,7 +52,7 @@ export class TscBasedCompiler {
         // Basic TS‐file validity checks
         for (const file of Object.values(sourceFiles)) {
             if (!file.name || !file.content) {
-                throw new Error(`Invalid TypeScript file: "${ file.name }".`);
+                throw new Error(`Invalid TypeScript file: "${file.name}".`);
             }
         }
 
@@ -65,35 +65,35 @@ export class TscBasedCompiler {
             Object.values(sourceFiles).map(async (file) => {
                 const diskPath = path.join(this.sourcePath, file.name);
                 const rel = path.relative(this.sourcePath, diskPath);
-                if (rel.startsWith('..') || path.isAbsolute(rel)) {
+                if (rel.startsWith("..") || path.isAbsolute(rel)) {
                     throw new Error(
-                        `Invalid file path (outside workspace): "${ file.name }".`,
+                        `Invalid file path (outside workspace): "${file.name}".`,
                     );
                 }
                 await fs.mkdir(path.dirname(diskPath), { recursive: true });
-                await fs.writeFile(diskPath, file.content, 'utf8');
+                await fs.writeFile(diskPath, file.content, "utf8");
             }),
         );
 
         // Default tsconfig JSON (string-typed values!)
         let tsconfigJson: any = {
             compilerOptions: {
-                target: 'ES2020',
+                target: "ES2020",
                 strict: false,
                 experimentalDecorators: true,
                 emitDecoratorMetadata: true,
-                rootDir: './',
+                rootDir: "./",
                 ...NON_CONFIGURABLE,
             },
             include: Object.values(sourceFiles).map((f) => f.name),
-            exclude: ['node_modules'],
+            exclude: ["node_modules"],
         };
 
         // Deep-merge with app’s tsconfig.json if it exists
-        const appTsconfigPath = path.join(this.sourcePath, 'tsconfig.json');
+        const appTsconfigPath = path.join(this.sourcePath, "tsconfig.json");
         try {
-            logger.debug(`Reading app tsconfig from ${ appTsconfigPath }`);
-            const text = await fs.readFile(appTsconfigPath, 'utf8');
+            logger.debug(`Reading app tsconfig from ${appTsconfigPath}`);
+            const text = await fs.readFile(appTsconfigPath, "utf8");
             const parsed = TS.parseConfigFileTextToJson(
                 appTsconfigPath,
                 text,
@@ -110,10 +110,10 @@ export class TscBasedCompiler {
             };
 
             logger.debug(
-                `Merged tsconfig: ${ JSON.stringify(tsconfigJson, null, 2) }`,
+                `Merged tsconfig: ${JSON.stringify(tsconfigJson, null, 2)}`,
             );
         } catch {
-            logger.debug('No valid app tsconfig—using defaults.');
+            logger.debug("No valid app tsconfig—using defaults.");
         }
 
         // Write the merged tsconfig in the workspace
@@ -121,27 +121,27 @@ export class TscBasedCompiler {
         await fs.writeFile(
             tempConfigPath,
             JSON.stringify(tsconfigJson, null, 2),
-            'utf8',
+            "utf8",
         );
 
         // 9) Resolve the tsc CLI (preferring an app‐local install)
         let tscCli: string;
         try {
             const appRequire = createRequire(
-                path.join(this.sourcePath, 'app.json'),
+                path.join(this.sourcePath, "app.json"),
             );
-            tscCli = appRequire.resolve('typescript/lib/tsc.js');
-            logger.debug(`Using app's TS CLI at ${ tscCli }`);
+            tscCli = appRequire.resolve("typescript/lib/tsc.js");
+            logger.debug(`Using app's TS CLI at ${tscCli}`);
         } catch {
-            tscCli = require.resolve('typescript/lib/tsc.js');
-            logger.debug(`Falling back to host TS CLI at ${ tscCli }`);
+            tscCli = require.resolve("typescript/lib/tsc.js");
+            logger.debug(`Falling back to host TS CLI at ${tscCli}`);
         }
 
         // Invoke tsc
         try {
             await execFileAsync(
                 process.execPath,
-                [tscCli, '-p', tempConfigPath],
+                [tscCli, "-p", tempConfigPath],
                 {
                     cwd: this.sourcePath,
                     maxBuffer: 1024 * 1024, // 1 MB buffer
@@ -154,19 +154,14 @@ export class TscBasedCompiler {
                 .split(/\r?\n/)
                 .filter(Boolean)
                 .map((line: string) => {
-                    const m = line.match(
-                        /^(.*\.ts)\((\d+),(\d+)\):\s*(.*)$/,
-                    );
+                    const m = line.match(/^(.*\.ts)\((\d+),(\d+)\):\s*(.*)$/);
                     if (m) {
                         const [, full, ln, ch, msg] = m;
                         return {
-                            filename: path.relative(
-                                this.sourcePath,
-                                full,
-                            ),
+                            filename: path.relative(this.sourcePath, full),
                             line: +ln - 1,
                             character: +ch - 1,
-                            lineText: '',
+                            lineText: "",
                             message: msg,
                             originalMessage: msg,
                             originalDiagnostic: undefined,
@@ -176,7 +171,7 @@ export class TscBasedCompiler {
                         filename: appInfo.classFile,
                         line: 0,
                         character: 0,
-                        lineText: '',
+                        lineText: "",
                         message: line,
                         originalMessage: line,
                         originalDiagnostic: undefined,
@@ -211,7 +206,7 @@ export class TscBasedCompiler {
             permissions: appInfo.permissions,
         };
 
-        const collect = async (dir: string, base = ''): Promise<void> => {
+        const collect = async (dir: string, base = ""): Promise<void> => {
             for (const entry of await fs.readdir(dir, {
                 withFileTypes: true,
             })) {
@@ -219,11 +214,11 @@ export class TscBasedCompiler {
                 const rel = path.join(base, entry.name);
                 if (entry.isDirectory()) {
                     await collect(full, rel);
-                } else if (entry.isFile() && rel.endsWith('.js')) {
-                    const compiled = await fs.readFile(full, 'utf8');
+                } else if (entry.isFile() && rel.endsWith(".js")) {
+                    const compiled = await fs.readFile(full, "utf8");
                     result.files[rel] = {
                         name: rel,
-                        content: '', // TS sources already in memory
+                        content: "", // TS sources already in memory
                         compiled,
                         version: 1,
                     };
@@ -233,7 +228,7 @@ export class TscBasedCompiler {
         await collect(path.join(this.sourcePath, BUILD_DIR));
 
         // Point at the main JS file
-        const mainJs = appInfo.classFile.replace(/\.ts$/, '.js');
+        const mainJs = appInfo.classFile.replace(/\.ts$/, ".js");
         result.mainFile = result.files[mainJs];
 
         // Extract implemented interfaces from the TS AST
@@ -247,7 +242,7 @@ export class TscBasedCompiler {
 
         // Run inheritance checks
         this.appValidator.checkInheritance(
-            appInfo.classFile.replace(/\.ts$/, ''),
+            appInfo.classFile.replace(/\.ts$/, ""),
             result,
         );
 

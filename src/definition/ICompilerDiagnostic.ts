@@ -1,4 +1,4 @@
-import { Diagnostic } from 'typescript';
+import type { Diagnostic } from "typescript";
 
 export interface ICompilerDiagnostic {
     filename?: string;

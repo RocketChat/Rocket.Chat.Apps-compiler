@@ -1,5 +1,5 @@
-import * as path from 'path';
-import cloneDeep = require('lodash.clonedeep');
+import * as path from "path";
+import cloneDeep = require("lodash.clonedeep");
 
 enum AllowedInternalModules {
     path,
@@ -14,7 +14,7 @@ enum AllowedInternalModules {
     https,
     zlib,
     util,
-    os
+    os,
 }
 
 export class Utilities {
@@ -28,7 +28,13 @@ export class Utilities {
 
         Object.getOwnPropertyNames(item).forEach((prop: string) => {
             // tslint:disable-next-line:max-line-length
-            if (item.hasOwnProperty(prop) && item[prop] !== null && (typeof item[prop] === 'object' || typeof item[prop] === 'function') && !Object.isFrozen(item[prop])) {
+            if (
+                item.hasOwnProperty(prop) &&
+                item[prop] !== null &&
+                (typeof item[prop] === "object" ||
+                    typeof item[prop] === "function") &&
+                !Object.isFrozen(item[prop])
+            ) {
                 Utilities.deepFreeze(item[prop]);
             }
         });
@@ -45,6 +51,9 @@ export class Utilities {
     }
 
     public static transformModuleForCustomRequire(moduleName: string): string {
-        return `${ path.normalize(moduleName).replace(/\.\.?\//g, '').replace(/^\//, '') }.ts`;
+        return `${path
+            .normalize(moduleName)
+            .replace(/\.\.?\//g, "")
+            .replace(/^\//, "")}.ts`;
     }
 }
