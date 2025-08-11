@@ -13,7 +13,13 @@ import {
 } from 'typescript';
 
 import { TypeScript } from '../AppsCompiler';
-import { IAppSource, ICompilerDiagnostic, ICompilerFile, ICompilerResult, IMapCompilerFile } from '../definition';
+import {
+    IAppSource,
+    ICompilerDiagnostic,
+    ICompilerFile,
+    ICompilerResult,
+    IMapCompilerFile,
+} from '../definition';
 import { normalizeDiagnostics } from '../misc/normalizeDiagnostics';
 import { Utilities } from '../misc/Utilities';
 import { AppsEngineValidator } from './AppsEngineValidator';
@@ -48,9 +54,18 @@ export class TypescriptCompiler {
         this.libraryFiles = {};
     }
 
-    public transpileSource({ appInfo, sourceFiles: files }: IAppSource): ICompilerResult {
-        if (!appInfo.classFile || !files[appInfo.classFile] || !this.isValidFile(files[appInfo.classFile])) {
-            throw new Error(`Invalid App package. Could not find the classFile (${ appInfo.classFile }) file.`);
+    public transpileSource({
+        appInfo,
+        sourceFiles: files,
+    }: IAppSource): ICompilerResult {
+        if (
+            !appInfo.classFile
+            || !files[appInfo.classFile]
+            || !this.isValidFile(files[appInfo.classFile])
+        ) {
+            throw new Error(
+                `Invalid App package. Could not find the classFile (${ appInfo.classFile }) file.`,
+            );
         }
 
         const startTime = Date.now();
@@ -121,17 +136,32 @@ export class TypescriptCompiler {
             },
             getCompilationSettings: () => this.compilerOptions,
             getCurrentDirectory: () => this.sourcePath,
-            getDefaultLibFileName: () => this.ts.getDefaultLibFilePath(this.compilerOptions),
-            fileExists: (fileName: string): boolean => this.ts.sys.fileExists(fileName),
-            readFile: (fileName: string): string | undefined => this.ts.sys.readFile(fileName),
-            resolveModuleNames: (moduleNames: Array<string>, containingFile: string): Array<ResolvedModule> => {
+            getDefaultLibFileName: () =>
+                this.ts.getDefaultLibFilePath(this.compilerOptions),
+            fileExists: (fileName: string): boolean =>
+                this.ts.sys.fileExists(fileName),
+            readFile: (fileName: string): string | undefined =>
+                this.ts.sys.readFile(fileName),
+            resolveModuleNames: (
+                moduleNames: Array<string>,
+                containingFile: string,
+            ): Array<ResolvedModule> => {
                 const resolvedModules: ResolvedModule[] = [];
                 const moduleResHost: ModuleResolutionHost = {
-                    fileExists: host.fileExists, readFile: host.readFile, trace: (traceDetail) => console.log(traceDetail),
+                    fileExists: host.fileExists,
+                    readFile: host.readFile,
+                    trace: (traceDetail) => console.log(traceDetail),
                 };
 
                 for (const moduleName of moduleNames) {
-                    const index = this.resolver(moduleName, resolvedModules, containingFile, result, moduleResHost, dependencyCheck);
+                    const index = this.resolver(
+                        moduleName,
+                        resolvedModules,
+                        containingFile,
+                        result,
+                        moduleResHost,
+                        dependencyCheck,
+                    );
 
                     if (index === -1) {
                         modulesNotFound.push({
@@ -150,7 +180,10 @@ export class TypescriptCompiler {
             },
         } as LanguageServiceHost;
 
-        const languageService = this.ts.createLanguageService(host, this.ts.createDocumentRegistry());
+        const languageService = this.ts.createLanguageService(
+            host,
+            this.ts.createDocumentRegistry(),
+        );
 
         try {
             const coDiag = languageService.getCompilerOptionsDiagnostics();
@@ -158,11 +191,15 @@ export class TypescriptCompiler {
             if (coDiag.length !== 0) {
                 console.log(coDiag);
 
-                console.error('A VERY UNEXPECTED ERROR HAPPENED THAT SHOULD NOT!');
+                console.error(
+                    'A VERY UNEXPECTED ERROR HAPPENED THAT SHOULD NOT!',
+                );
                 // console.error('Please report this error with a screenshot of the logs. ' +
                 //     `Also, please email a copy of the App being installed/updated: ${ info.name } v${ info.version } (${ info.id })`);
 
-                throw new Error(`Language Service's Compiler Options Diagnostics contains ${ coDiag.length } diagnostics.`);
+                throw new Error(
+                    `Language Service's Compiler Options Diagnostics contains ${ coDiag.length } diagnostics.`,
+                );
             }
         } catch (e) {
             if (modulesNotFound.length !== 0) {
@@ -175,10 +212,15 @@ export class TypescriptCompiler {
             throw e;
         }
 
-        result.implemented = this.getImplementedInterfaces(languageService, appInfo);
+        result.implemented = this.getImplementedInterfaces(
+            languageService,
+            appInfo,
+        );
 
         Object.defineProperty(result, 'diagnostics', {
-            value: normalizeDiagnostics(this.ts.getPreEmitDiagnostics(languageService.getProgram())),
+            value: normalizeDiagnostics(
+                this.ts.getPreEmitDiagnostics(languageService.getProgram()),
+            ),
             configurable: false,
             writable: false,
         });
@@ -197,7 +239,10 @@ export class TypescriptCompiler {
 
         result.mainFile = result.files[appInfo.classFile.replace(/\.ts$/, '.js')];
 
-        this.appValidator.checkInheritance(appInfo.classFile.replace(/\.ts$/, ''), result);
+        this.appValidator.checkInheritance(
+            appInfo.classFile.replace(/\.ts$/, ''),
+            result,
+        );
 
         result.duration = Date.now() - startTime;
 
@@ -213,7 +258,10 @@ export class TypescriptCompiler {
         dependencyCheck: EventEmitter,
     ): number {
         // Keep compatibility with apps importing apps-ts-definition
-        moduleName = moduleName.replace(/@rocket.chat\/apps-ts-definition\//, '@rocket.chat/apps-engine/definition/');
+        moduleName = moduleName.replace(
+            /@rocket.chat\/apps-ts-definition\//,
+            '@rocket.chat/apps-engine/definition/',
+        );
 
         // ignore @types/node/*.d.ts
         if (/node_modules\/@types\/node\/\S+\.d\.ts$/.test(containingFile)) {
@@ -222,7 +270,9 @@ export class TypescriptCompiler {
 
         if (Utilities.allowedInternalModuleRequire(moduleName)) {
             dependencyCheck.emit('dependencyCheck', 'native');
-            return resolvedModules.push({ resolvedFileName: `${ moduleName }.js` });
+            return resolvedModules.push({
+                resolvedFileName: `${ moduleName }.js`,
+            });
         }
 
         const resolvedWithIndex = this.resolvePath(
@@ -241,9 +291,18 @@ export class TypescriptCompiler {
         }
 
         // Now, let's try the "standard" resolution but with our little twist on it
-        const rs = this.ts.resolveModuleName(moduleName, containingFile, this.compilerOptions, moduleResHost);
+        const rs = this.ts.resolveModuleName(
+            moduleName,
+            containingFile,
+            this.compilerOptions,
+            moduleResHost,
+        );
         if (rs.resolvedModule) {
-            if (rs.resolvedModule.isExternalLibraryImport && rs.resolvedModule.packageId && rs.resolvedModule.packageId.name !== '@rocket.chat/apps-engine') {
+            if (
+                rs.resolvedModule.isExternalLibraryImport
+                && rs.resolvedModule.packageId
+                && rs.resolvedModule.packageId.name !== '@rocket.chat/apps-engine'
+            ) {
                 dependencyCheck.emit('dependencyCheck', 'external');
             }
 
@@ -254,7 +313,9 @@ export class TypescriptCompiler {
     }
 
     private resolvePath(containingFile: string, moduleName: string): string {
-        const currentFolderPath = path.dirname(containingFile).replace(this.sourcePath.replace(/\/$/, ''), '');
+        const currentFolderPath = path
+            .dirname(containingFile)
+            .replace(this.sourcePath.replace(/\/$/, ''), '');
         const modulePath = path.join(currentFolderPath, moduleName);
 
         // Let's ensure we search for the App's modules first
@@ -264,10 +325,15 @@ export class TypescriptCompiler {
         }
     }
 
-    private getImplementedInterfaces(languageService: LanguageService, appInfo: IAppInfo): ICompilerResult['implemented'] {
+    private getImplementedInterfaces(
+        languageService: LanguageService,
+        appInfo: IAppInfo,
+    ): ICompilerResult['implemented'] {
         const result: ICompilerResult['implemented'] = [];
 
-        const src = languageService.getProgram().getSourceFile(appInfo.classFile);
+        const src = languageService
+            .getProgram()
+            .getSourceFile(appInfo.classFile);
 
         this.ts.forEachChild(src, (n) => {
             if (!this.ts.isClassDeclaration(n)) {
@@ -281,7 +347,8 @@ export class TypescriptCompiler {
 
                 this.ts.forEachChild(node, (nn) => {
                     const interfaceName = nn.getText();
-                    if (node.token === this.ts.SyntaxKind.ImplementsKeyword
+                    if (
+                        node.token === this.ts.SyntaxKind.ImplementsKeyword
                         && this.appValidator.isValidAppInterface(interfaceName)
                     ) {
                         result.push(interfaceName);
@@ -322,8 +389,10 @@ export class TypescriptCompiler {
             return false;
         }
 
-        return file.name.trim() !== ''
+        return (
+            file.name.trim() !== ''
             && path.normalize(file.name)
-            && file.content.trim() !== '';
+            && file.content.trim() !== ''
+        );
     }
 }

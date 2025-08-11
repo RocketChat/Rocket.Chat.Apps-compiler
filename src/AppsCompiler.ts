@@ -4,12 +4,17 @@ import * as fallbackTypescript from 'typescript';
 
 import { createRequire } from 'module';
 import { getAppSource } from './compiler/getAppSource';
-import { IBundledCompilerResult, ICompilerDescriptor, ICompilerResult } from './definition';
+import {
+    IBundledCompilerResult,
+    ICompilerDescriptor,
+    ICompilerResult,
+} from './definition';
 import { FolderDetails } from './misc/folderDetails';
 import { AppPackager } from './packager';
-import { TypescriptCompiler } from './compiler/TypescriptCompiler';
 import { AppsEngineValidator } from './compiler/AppsEngineValidator';
 import getBundler, { AvailableBundlers, BundlerFunction } from './bundler';
+import { TscBasedCompiler } from './compiler/TscBasedCompiler';
+import { TypescriptCompiler } from './compiler/TypescriptCompiler';
 
 export type TypeScript = typeof fallbackTypescript;
 
@@ -22,14 +27,35 @@ export class AppsCompiler {
 
     private readonly typescriptCompiler: TypescriptCompiler;
 
+    private readonly typescriptNativeCompiler: TscBasedCompiler;
+
+    private transpiler: TypescriptCompiler | TscBasedCompiler;
+
     constructor(
         private readonly compilerDesc: ICompilerDescriptor,
         private readonly sourcePath: string,
         ts: TypeScript = fallbackTypescript,
+        useNativeCompiler = false,
     ) {
-        this.validator = new AppsEngineValidator(createRequire(path.join(sourcePath, 'app.json')));
+        this.validator = new AppsEngineValidator(
+            createRequire(path.join(sourcePath, 'app.json')),
+        );
 
-        this.typescriptCompiler = new TypescriptCompiler(sourcePath, ts, this.validator);
+        this.typescriptCompiler = new TypescriptCompiler(
+            sourcePath,
+            ts,
+            this.validator,
+        );
+
+        this.typescriptNativeCompiler = new TscBasedCompiler(
+            sourcePath,
+            this.validator,
+        );
+
+        this.transpiler = useNativeCompiler
+            ? this.typescriptNativeCompiler
+            : this.typescriptCompiler;
+
         this.bundler = getBundler(AvailableBundlers.esbuild);
     }
 
@@ -47,13 +73,18 @@ export class AppsCompiler {
     public async compile(): Promise<ICompilerResult> {
         const source = await getAppSource(this.sourcePath);
 
-        this.compilationResult = this.typescriptCompiler.transpileSource(source);
+        this.compilationResult = await this.transpiler.transpileSource(
+            source,
+        );
 
         return this.getLatestCompilationResult();
     }
 
     public async bundle(): Promise<IBundledCompilerResult> {
-        this.compilationResult = await this.bundler(this.getLatestCompilationResult(), this.validator);
+        this.compilationResult = await this.bundler(
+            this.getLatestCompilationResult(),
+            this.validator,
+        );
 
         return this.getLatestCompilationResult() as IBundledCompilerResult;
     }
@@ -75,7 +106,12 @@ export class AppsCompiler {
             throw new Error('No compilation data found');
         }
 
-        const packager = new AppPackager(this.compilerDesc, fd, compilationResult, outputPath);
+        const packager = new AppPackager(
+            this.compilerDesc,
+            fd,
+            compilationResult,
+            outputPath,
+        );
 
         return fs.promises.readFile(await packager.zipItUp());
     }
