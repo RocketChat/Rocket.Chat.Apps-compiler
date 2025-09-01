@@ -1,22 +1,27 @@
-import * as os from 'os';
-import path from 'path';
-import { build, OnLoadArgs, OnResolveArgs, PluginBuild } from 'esbuild';
+import * as os from "os";
+import path from "path";
+import type { OnLoadArgs, OnResolveArgs, PluginBuild } from "esbuild";
+import { build } from "esbuild";
 
-import { ICompilerResult } from '../definition';
-import { IBundledCompilerResult } from '../definition/ICompilerResult';
-import { AppsEngineValidator } from '../compiler/AppsEngineValidator';
+import type { ICompilerResult } from "../definition";
+import type { IBundledCompilerResult } from "../definition/ICompilerResult";
+import type { AppsEngineValidator } from "../compiler/AppsEngineValidator";
 
-const isWin = os.platform() === 'win32';
+const isWin = os.platform() === "win32";
 
 function normalizeAppModulePath(modulePath: string, parentDir: string): string {
-    return /\.\.?\//.test(modulePath)
-        ? isWin
-            ? path.join(path.dirname(parentDir), modulePath).concat('.js')
-            : path
-                .resolve('/', path.dirname(parentDir), modulePath)
-                .substring(1)
-                .concat('.js')
-        : modulePath;
+    const isRelative = /\.\.?\//.test(modulePath);
+
+    if (!isRelative) {
+        return modulePath;
+    }
+
+    const baseDir = path.dirname(parentDir);
+    const resolvedPath = isWin
+        ? path.join(baseDir, modulePath)
+        : path.resolve("/", baseDir, modulePath).substring(1);
+
+    return `${resolvedPath}.js`;
 }
 
 export async function bundleCompilation(
@@ -27,31 +32,32 @@ export async function bundleCompilation(
         write: false,
         bundle: true,
         minify: true,
-        platform: 'node',
-        target: ['node20'],
+        platform: "node",
+        target: ["node20"],
         define: {
-            'global.Promise': 'Promise',
+            "global.Promise": "Promise",
         },
-        external: ['@rocket.chat/apps-engine/*'],
+        external: ["@rocket.chat/apps-engine/*"],
         stdin: {
             contents: r.mainFile.compiled,
             sourcefile: r.mainFile.name,
-            loader: 'js',
+            loader: "js",
         },
         plugins: [
             {
-                name: 'apps-engine',
+                name: "apps-engine",
                 setup(build: PluginBuild) {
                     build.onResolve(
                         { filter: /.*/ },
                         async (args: OnResolveArgs) => {
                             // Let esbuild handle absolute file paths (e.g. node:fs) & initial stdin
-                            if (args.namespace === 'file') {
+                            if (args.namespace === "file") {
                                 return;
                             }
 
-                            const isRelative = args.path.startsWith('./')
-                                || args.path.startsWith('../');
+                            const isRelative =
+                                args.path.startsWith("./") ||
+                                args.path.startsWith("../");
 
                             if (isRelative) {
                                 // normalize into the key you used in r.files
@@ -60,20 +66,22 @@ export async function bundleCompilation(
                                     args.importer,
                                 );
                                 modulePath = modulePath
-                                    .replace(/^:\\/, '')
-                                    .replace(/\\/g, '/');
+                                    .replace(/^:\\/, "")
+                                    .replace(/\\/g, "/");
                                 if (r.files[modulePath]) {
                                     return {
-                                        namespace: 'app-source',
+                                        namespace: "app-source",
                                         path: modulePath,
                                     };
                                 }
                                 // maybe they imported a directory
-                                const idx = `${ modulePath.replace(/\.js$/, '')
-                                }/index.js`;
+                                const idx = `${modulePath.replace(
+                                    /\.js$/,
+                                    "",
+                                )}/index.js`;
                                 if (r.files[idx]) {
                                     return {
-                                        namespace: 'app-source',
+                                        namespace: "app-source",
                                         path: idx,
                                     };
                                 }
@@ -81,7 +89,7 @@ export async function bundleCompilation(
                                 return {
                                     errors: [
                                         {
-                                            text: `Cannot find app file "${ modulePath }"`,
+                                            text: `Cannot find app file "${modulePath}"`,
                                         },
                                     ],
                                 };
@@ -90,34 +98,35 @@ export async function bundleCompilation(
                             // non-relative: try resolving through AppsEngineValidator
                             let nodeModulePath: string | undefined;
                             try {
-                                nodeModulePath = validator.resolveAppDependencyPath(
-                                    args.path,
-                                );
+                                nodeModulePath =
+                                    validator.resolveAppDependencyPath(
+                                        args.path,
+                                    );
                             } catch {
                                 // resolution failed
                                 return {
                                     errors: [
                                         {
-                                            text: `Cannot find app dependency "${ args.path }"`,
+                                            text: `Cannot find app dependency "${args.path}"`,
                                         },
                                     ],
                                 };
                             }
 
                             if (
-                                nodeModulePath
-                                && typeof nodeModulePath === 'string'
-                                && path.isAbsolute(nodeModulePath)
+                                nodeModulePath &&
+                                typeof nodeModulePath === "string" &&
+                                path.isAbsolute(nodeModulePath)
                             ) {
                                 return {
-                                    namespace: 'file',
+                                    namespace: "file",
                                     path: nodeModulePath,
                                 };
                             }
 
                             // for @rocket.chat/apps-engine imports, let esbuild bundle via "file"
                             if (/^@rocket\.chat\/apps-engine/.test(args.path)) {
-                                return { namespace: 'file', path: args.path };
+                                return { namespace: "file", path: args.path };
                             }
 
                             // otherwise treat as external
@@ -126,13 +135,13 @@ export async function bundleCompilation(
                     );
 
                     build.onLoad(
-                        { filter: /.*/, namespace: 'app-source' },
+                        { filter: /.*/, namespace: "app-source" },
                         (args: OnLoadArgs) => {
                             if (!r.files[args.path]) {
                                 return {
                                     errors: [
                                         {
-                                            text: `File ${ args.path } could not be found`,
+                                            text: `File ${args.path} could not be found`,
                                         },
                                     ],
                                 };

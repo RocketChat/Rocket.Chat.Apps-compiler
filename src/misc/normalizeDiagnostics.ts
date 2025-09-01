@@ -1,9 +1,12 @@
-import { Diagnostic, flattenDiagnosticMessageText } from 'typescript';
-import { ICompilerDiagnostic } from '../definition';
+import type { Diagnostic } from "typescript";
+import { flattenDiagnosticMessageText } from "typescript";
+import type { ICompilerDiagnostic } from "../definition";
 
-export function normalizeDiagnostics(diagnostics: ReadonlyArray<Diagnostic>): Array<ICompilerDiagnostic> {
+export function normalizeDiagnostics(
+    diagnostics: ReadonlyArray<Diagnostic>,
+): Array<ICompilerDiagnostic> {
     return diagnostics.map((diag) => {
-        const message = flattenDiagnosticMessageText(diag.messageText, '\n');
+        const message = flattenDiagnosticMessageText(diag.messageText, "\n");
 
         const norm: ICompilerDiagnostic = {
             originalDiagnostic: diag,
@@ -17,15 +20,22 @@ export function normalizeDiagnostics(diagnostics: ReadonlyArray<Diagnostic>): Ar
         });
 
         if (diag.file) {
-            const { line, character } = diag.file.getLineAndCharacterOfPosition(diag.start);
+            const { line, character } = diag.file.getLineAndCharacterOfPosition(
+                diag.start,
+            );
             const lineStart = diag.file.getPositionOfLineAndCharacter(line, 0);
 
             Object.assign(norm, {
                 filename: diag.file.fileName,
                 line,
                 character,
-                lineText: diag.file.getText().substring(lineStart, diag.file.getLineEndOfPosition(lineStart)),
-                message: `Error ${ diag.file.fileName } (${ line + 1 },${ character + 1 }): ${ message }`,
+                lineText: diag.file
+                    .getText()
+                    .substring(
+                        lineStart,
+                        diag.file.getLineEndOfPosition(lineStart),
+                    ),
+                message: `Error ${diag.file.fileName} (${line + 1},${character + 1}): ${message}`,
             });
         }
 

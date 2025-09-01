@@ -1,6 +1,6 @@
-import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
+import type { IAppInfo } from "@rocket.chat/apps-engine/definition/metadata";
 
-import { ICompilerFile } from './ICompilerFile';
+import type { ICompilerFile } from "./ICompilerFile";
 
 export interface IAppSource {
     appInfo: IAppInfo;

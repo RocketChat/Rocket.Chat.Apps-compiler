@@ -1,29 +1,29 @@
-import { EventEmitter } from 'events';
-import fs from 'fs';
-import path from 'path';
+import { EventEmitter } from "events";
+import fs from "fs";
+import path from "path";
 
-import { IAppInfo } from '@rocket.chat/apps-engine/definition/metadata';
-import {
+import type { IAppInfo } from "@rocket.chat/apps-engine/definition/metadata";
+import type {
     CompilerOptions,
     EmitOutput,
     LanguageService,
     LanguageServiceHost,
     ModuleResolutionHost,
     ResolvedModule,
-} from 'typescript';
+} from "typescript";
 
-import { TypeScript } from '../AppsCompiler';
-import {
+import type { TypeScript } from "../AppsCompiler";
+import type {
     IAppSource,
     ICompilerDiagnostic,
     ICompilerFile,
     ICompilerResult,
     IMapCompilerFile,
-} from '../definition';
-import { normalizeDiagnostics } from '../misc/normalizeDiagnostics';
-import { Utilities } from '../misc/Utilities';
-import { AppsEngineValidator } from './AppsEngineValidator';
-import logger from '../misc/logger';
+} from "../definition";
+import { normalizeDiagnostics } from "../misc/normalizeDiagnostics";
+import { Utilities } from "../misc/Utilities";
+import type { AppsEngineValidator } from "./AppsEngineValidator";
+import logger from "../misc/logger";
 
 export class TypescriptCompiler {
     private readonly compilerOptions: CompilerOptions;
@@ -46,7 +46,7 @@ export class TypescriptCompiler {
             noImplicitReturns: true,
             emitDecoratorMetadata: true,
             experimentalDecorators: true,
-            types: ['node'],
+            types: ["node"],
             // Set this to true if you would like to see the module resolution process
             traceResolution: false,
         };
@@ -59,12 +59,12 @@ export class TypescriptCompiler {
         sourceFiles: files,
     }: IAppSource): ICompilerResult {
         if (
-            !appInfo.classFile
-            || !files[appInfo.classFile]
-            || !this.isValidFile(files[appInfo.classFile])
+            !appInfo.classFile ||
+            !files[appInfo.classFile] ||
+            !this.isValidFile(files[appInfo.classFile])
         ) {
             throw new Error(
-                `Invalid App package. Could not find the classFile (${ appInfo.classFile }) file.`,
+                `Invalid App package. Could not find the classFile (${appInfo.classFile}) file.`,
             );
         }
 
@@ -87,7 +87,7 @@ export class TypescriptCompiler {
         // and that the files are valid
         Object.keys(result.files).forEach((key) => {
             if (!this.isValidFile(result.files[key])) {
-                throw new Error(`Invalid TypeScript file: "${ key }".`);
+                throw new Error(`Invalid TypeScript file: "${key}".`);
             }
 
             result.files[key].name = path.normalize(result.files[key].name);
@@ -97,18 +97,18 @@ export class TypescriptCompiler {
         let hasNativeDependencies = false;
         const dependencyCheck = new EventEmitter();
 
-        dependencyCheck.on('dependencyCheck', (dependencyType) => {
+        dependencyCheck.on("dependencyCheck", (dependencyType) => {
             switch (dependencyType) {
-                case 'external':
+                case "external":
                     if (!hasExternalDependencies) {
                         hasExternalDependencies = true;
-                        logger.warn('App has external module(s) as dependency');
+                        logger.warn("App has external module(s) as dependency");
                     }
                     break;
-                case 'native':
+                case "native":
                     if (!hasNativeDependencies) {
                         hasNativeDependencies = true;
-                        logger.warn('App has native module(s) as dependency');
+                        logger.warn("App has native module(s) as dependency");
                     }
                     break;
                 default:
@@ -121,14 +121,16 @@ export class TypescriptCompiler {
             getScriptFileNames: () => Object.keys(result.files),
             getScriptVersion: (fileName) => {
                 fileName = path.normalize(fileName);
-                const file = result.files[fileName] || this.getLibraryFile(fileName);
-                return file && file.version.toString();
+                const file =
+                    result.files[fileName] || this.getLibraryFile(fileName);
+                return file?.version?.toString();
             },
             getScriptSnapshot: (fileName) => {
                 fileName = path.normalize(fileName);
-                const file = result.files[fileName] || this.getLibraryFile(fileName);
+                const file =
+                    result.files[fileName] || this.getLibraryFile(fileName);
 
-                if (!file || !file.content) {
+                if (!file?.content) {
                     return;
                 }
 
@@ -168,9 +170,9 @@ export class TypescriptCompiler {
                             filename: containingFile,
                             line: 0,
                             character: 0,
-                            lineText: '',
-                            message: `Failed to resolve module: ${ moduleName }`,
-                            originalMessage: `Module not found: ${ moduleName }`,
+                            lineText: "",
+                            message: `Failed to resolve module: ${moduleName}`,
+                            originalMessage: `Module not found: ${moduleName}`,
                             originalDiagnostic: undefined,
                         });
                     }
@@ -192,13 +194,13 @@ export class TypescriptCompiler {
                 console.log(coDiag);
 
                 console.error(
-                    'A VERY UNEXPECTED ERROR HAPPENED THAT SHOULD NOT!',
+                    "A VERY UNEXPECTED ERROR HAPPENED THAT SHOULD NOT!",
                 );
                 // console.error('Please report this error with a screenshot of the logs. ' +
                 //     `Also, please email a copy of the App being installed/updated: ${ info.name } v${ info.version } (${ info.id })`);
 
                 throw new Error(
-                    `Language Service's Compiler Options Diagnostics contains ${ coDiag.length } diagnostics.`,
+                    `Language Service's Compiler Options Diagnostics contains ${coDiag.length} diagnostics.`,
                 );
             }
         } catch (e) {
@@ -217,7 +219,7 @@ export class TypescriptCompiler {
             appInfo,
         );
 
-        Object.defineProperty(result, 'diagnostics', {
+        Object.defineProperty(result, "diagnostics", {
             value: normalizeDiagnostics(
                 this.ts.getPreEmitDiagnostics(languageService.getProgram()),
             ),
@@ -229,7 +231,7 @@ export class TypescriptCompiler {
             const file: ICompilerFile = result.files[key];
             const output: EmitOutput = languageService.getEmitOutput(file.name);
 
-            file.name = key.replace(/\.ts$/g, '.js');
+            file.name = key.replace(/\.ts$/g, ".js");
 
             delete result.files[key];
             result.files[file.name] = file;
@@ -237,10 +239,11 @@ export class TypescriptCompiler {
             file.compiled = output.outputFiles[0].text;
         });
 
-        result.mainFile = result.files[appInfo.classFile.replace(/\.ts$/, '.js')];
+        result.mainFile =
+            result.files[appInfo.classFile.replace(/\.ts$/, ".js")];
 
         this.appValidator.checkInheritance(
-            appInfo.classFile.replace(/\.ts$/, ''),
+            appInfo.classFile.replace(/\.ts$/, ""),
             result,
         );
 
@@ -260,7 +263,7 @@ export class TypescriptCompiler {
         // Keep compatibility with apps importing apps-ts-definition
         moduleName = moduleName.replace(
             /@rocket.chat\/apps-ts-definition\//,
-            '@rocket.chat/apps-engine/definition/',
+            "@rocket.chat/apps-engine/definition/",
         );
 
         // ignore @types/node/*.d.ts
@@ -269,15 +272,15 @@ export class TypescriptCompiler {
         }
 
         if (Utilities.allowedInternalModuleRequire(moduleName)) {
-            dependencyCheck.emit('dependencyCheck', 'native');
+            dependencyCheck.emit("dependencyCheck", "native");
             return resolvedModules.push({
-                resolvedFileName: `${ moduleName }.js`,
+                resolvedFileName: `${moduleName}.js`,
             });
         }
 
         const resolvedWithIndex = this.resolvePath(
             containingFile,
-            `${ moduleName }/index`,
+            `${moduleName}/index`,
         );
         if (result.files[resolvedWithIndex]) {
             return resolvedModules.push({
@@ -299,11 +302,11 @@ export class TypescriptCompiler {
         );
         if (rs.resolvedModule) {
             if (
-                rs.resolvedModule.isExternalLibraryImport
-                && rs.resolvedModule.packageId
-                && rs.resolvedModule.packageId.name !== '@rocket.chat/apps-engine'
+                rs.resolvedModule.isExternalLibraryImport &&
+                rs.resolvedModule.packageId &&
+                rs.resolvedModule.packageId.name !== "@rocket.chat/apps-engine"
             ) {
-                dependencyCheck.emit('dependencyCheck', 'external');
+                dependencyCheck.emit("dependencyCheck", "external");
             }
 
             return resolvedModules.push(rs.resolvedModule);
@@ -315,11 +318,12 @@ export class TypescriptCompiler {
     private resolvePath(containingFile: string, moduleName: string): string {
         const currentFolderPath = path
             .dirname(containingFile)
-            .replace(this.sourcePath.replace(/\/$/, ''), '');
+            .replace(this.sourcePath.replace(/\/$/, ""), "");
         const modulePath = path.join(currentFolderPath, moduleName);
 
         // Let's ensure we search for the App's modules first
-        const transformedModule = Utilities.transformModuleForCustomRequire(modulePath);
+        const transformedModule =
+            Utilities.transformModuleForCustomRequire(modulePath);
         if (transformedModule) {
             return transformedModule;
         }
@@ -328,8 +332,8 @@ export class TypescriptCompiler {
     private getImplementedInterfaces(
         languageService: LanguageService,
         appInfo: IAppInfo,
-    ): ICompilerResult['implemented'] {
-        const result: ICompilerResult['implemented'] = [];
+    ): ICompilerResult["implemented"] {
+        const result: ICompilerResult["implemented"] = [];
 
         const src = languageService
             .getProgram()
@@ -348,8 +352,8 @@ export class TypescriptCompiler {
                 this.ts.forEachChild(node, (nn) => {
                     const interfaceName = nn.getText();
                     if (
-                        node.token === this.ts.SyntaxKind.ImplementsKeyword
-                        && this.appValidator.isValidAppInterface(interfaceName)
+                        node.token === this.ts.SyntaxKind.ImplementsKeyword &&
+                        this.appValidator.isValidAppInterface(interfaceName)
                     ) {
                         result.push(interfaceName);
                     }
@@ -361,7 +365,7 @@ export class TypescriptCompiler {
     }
 
     private getLibraryFile(fileName: string): ICompilerFile {
-        if (!fileName.endsWith('.d.ts')) {
+        if (!fileName.endsWith(".d.ts")) {
             return undefined;
         }
 
@@ -385,14 +389,14 @@ export class TypescriptCompiler {
     }
 
     private isValidFile(file: ICompilerFile): boolean {
-        if (!file || !file.name || !file.content) {
+        if (!file?.name || !file?.content) {
             return false;
         }
 
         return (
-            file.name.trim() !== ''
-            && path.normalize(file.name)
-            && file.content.trim() !== ''
+            file.name.trim() !== "" &&
+            path.normalize(file.name) &&
+            file.content.trim() !== ""
         );
     }
 }

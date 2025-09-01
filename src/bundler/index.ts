@@ -1,13 +1,16 @@
-import { AppsEngineValidator } from '../compiler/AppsEngineValidator';
-import { ICompilerResult, IBundledCompilerResult } from '../definition';
+import type { AppsEngineValidator } from "../compiler/AppsEngineValidator";
+import type { ICompilerResult, IBundledCompilerResult } from "../definition";
 
-import { bundleCompilation as esbuild } from './esbuild';
+import { bundleCompilation as esbuild } from "./esbuild";
 
 export enum AvailableBundlers {
-    esbuild = 'esbuild'
+    esbuild = "esbuild",
 }
 
-export type BundlerFunction = (compilation: ICompilerResult, validator: AppsEngineValidator) => Promise<IBundledCompilerResult>;
+export type BundlerFunction = (
+    compilation: ICompilerResult,
+    validator: AppsEngineValidator,
+) => Promise<IBundledCompilerResult>;
 
 export default function getBundler(name: AvailableBundlers): BundlerFunction {
     switch (name) {
@@ -17,5 +20,5 @@ export default function getBundler(name: AvailableBundlers): BundlerFunction {
 }
 
 export function isBundled(c: ICompilerResult): c is IBundledCompilerResult {
-    return 'bundle' in c;
+    return "bundle" in c;
 }

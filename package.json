@@ -4,8 +4,10 @@
     "description": "The Rocket.Chat apps compiler",
     "main": "index.js",
     "engines": {
-        "node": ">= 12.2.0"
+        "node": ">=22.0.0",
+        "typescript": "^5.8.3"
     },
+    "engineStrict": true,
     "scripts": {
         "test": "mocha -r ts-node/register './tests/**/*.spec.ts'",
         "test:watch": "mocha --require ts-node/register --watch --watch-files src, 'tests/**/*.ts'",
@@ -30,7 +32,7 @@
     },
     "homepage": "https://github.com/RocketChat/Rocket.Chat.Apps-compiler#readme",
     "devDependencies": {
-        "@rocket.chat/eslint-config": "^0.4.0",
+        "@rocket.chat/eslint-config": "^0.7.0",
         "@types/chai": "^4.2.12",
         "@types/fs-extra": "^8.0.0",
         "@types/glob": "^7.1.1",
@@ -39,11 +41,12 @@
         "@types/node": "~22.14.1",
         "@types/tv4": "^1.2.29",
         "@types/yazl": "^2.4.1",
-        "@typescript-eslint/eslint-plugin": "^3.7.1",
-        "@typescript-eslint/parser": "^3.7.1",
+        "@typescript-eslint/eslint-plugin": "^5.60.1",
+        "@typescript-eslint/parser": "^5.60.1",
         "babel-eslint": "^10.1.0",
         "chai": "^4.2.0",
-        "eslint": "^7.9.0",
+        "eslint": "^8.45.0",
+        "eslint-plugin-prettier": "^5.5.3",
         "husky": "^4.2.5",
         "mocha": "^8.0.1",
         "ts-node": "^9.1.1"

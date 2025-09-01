@@ -1,1 +1,1 @@
-export * from './AppPackager';
+export * from "./AppPackager";
