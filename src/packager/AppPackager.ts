@@ -13,7 +13,11 @@ import type {
 } from "../definition";
 import { isBundled } from "../bundler";
 import logger from "../misc/logger";
-import { readRcappsConfig, mergeIgnorePatterns, type IRcappsConfig } from "../misc/rcappsConfigReader";
+import {
+    readRcappsConfig,
+    mergeIgnorePatterns,
+    type IRcappsConfig,
+} from "../misc/rcappsConfigReader";
 
 export class AppPackager {
     public static DefaultIgnorePatterns: string[] = [
@@ -29,6 +33,7 @@ export class AppPackager {
     ];
 
     private zip = new Yazl.ZipFile();
+
     private rcappsConfig: IRcappsConfig | null = null;
 
     constructor(
@@ -46,7 +51,10 @@ export class AppPackager {
             this.rcappsConfig = await readRcappsConfig(this.fd.folder);
         }
 
-        const ignorePatterns = mergeIgnorePatterns(AppPackager.DefaultIgnorePatterns, this.rcappsConfig);
+        const ignorePatterns = mergeIgnorePatterns(
+            AppPackager.DefaultIgnorePatterns,
+            this.rcappsConfig,
+        );
 
         return {
             dot: false,
@@ -146,7 +154,7 @@ export class AppPackager {
     // tslint:disable-next-line:promise-function-async
     private async asyncGlob(): Promise<Array<string>> {
         const globOptions = await this.getGlobOptions();
-        
+
         return new Promise((resolve, reject) => {
             glob(this.fd.toZip, globOptions, (err, matches) => {
                 if (err) {

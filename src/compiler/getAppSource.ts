@@ -7,9 +7,17 @@ import type {
     ICompilerFile,
     IMapCompilerFile,
 } from "../definition";
-import { readRcappsConfig, shouldIgnoreFile, type IRcappsConfig } from "../misc/rcappsConfigReader";
+import {
+    readRcappsConfig,
+    shouldIgnoreFile,
+    type IRcappsConfig,
+} from "../misc/rcappsConfigReader";
 
-async function walkDirectory(directory: string, projectPath: string, rcappsConfig: IRcappsConfig | null): Promise<ICompilerFile[]> {
+async function walkDirectory(
+    directory: string,
+    projectPath: string,
+    rcappsConfig: IRcappsConfig | null,
+): Promise<ICompilerFile[]> {
     const dirents = await fs.readdir(directory, { withFileTypes: true });
     const files = await Promise.all(
         dirents
@@ -24,7 +32,7 @@ async function walkDirectory(directory: string, projectPath: string, rcappsConfi
                 }
 
                 // Check if this path should be ignored based on .rcappsconfig
-                if (rcappsConfig && rcappsConfig.ignore) {
+                if (rcappsConfig?.ignore) {
                     if (shouldIgnoreFile(relativePath, rcappsConfig.ignore)) {
                         return null;
                     }
@@ -105,8 +113,12 @@ function getTypescriptFilesFromProject(
 export async function getAppSource(path: string): Promise<IAppSource> {
     // Load .rcappsconfig if it exists
     const rcappsConfig = await readRcappsConfig(path);
-    
-    const directoryWalkData: ICompilerFile[] = await walkDirectory(path, path, rcappsConfig);
+
+    const directoryWalkData: ICompilerFile[] = await walkDirectory(
+        path,
+        path,
+        rcappsConfig,
+    );
     const projectFiles: ICompilerFile[] = filterProjectFiles(
         path,
         directoryWalkData,
