@@ -1,0 +1,18 @@
+{
+    "ignore": [
+        "*.log",
+        "*.tmp",
+        "debug/**",
+        "temp-*",
+        ".env",
+        ".env.*",
+        "coverage/**",
+        "*.spec.ts",
+        "*.test.ts",
+        "test/**",
+        "docs/**",
+        "*.md",
+        ".vscode/**",
+        ".idea/**"
+    ]
+}

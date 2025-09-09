@@ -13,25 +13,23 @@ import type {
 } from "../definition";
 import { isBundled } from "../bundler";
 import logger from "../misc/logger";
+import { readRcappsConfig, mergeIgnorePatterns, type IRcappsConfig } from "../misc/rcappsConfigReader";
 
 export class AppPackager {
-    public static GlobOptions: IOptions = {
-        dot: false,
-        silent: true,
-        ignore: [
-            "**/README.md",
-            "**/tslint.json",
-            "**/*.js.map",
-            "**/*.ts",
-            "**/*.d.ts",
-            "**/*.spec.ts",
-            "**/*.test.ts",
-            "**/dist/**",
-            "**/.*",
-        ],
-    };
+    public static DefaultIgnorePatterns: string[] = [
+        "**/README.md",
+        "**/tslint.json",
+        "**/*.js.map",
+        "**/*.ts",
+        "**/*.d.ts",
+        "**/*.spec.ts",
+        "**/*.test.ts",
+        "**/dist/**",
+        "**/.*",
+    ];
 
     private zip = new Yazl.ZipFile();
+    private rcappsConfig: IRcappsConfig | null = null;
 
     constructor(
         private readonly compilerDesc: ICompilerDescriptor,
@@ -39,6 +37,23 @@ export class AppPackager {
         private compilationResult: ICompilerResult | IBundledCompilerResult,
         private outputFilename: string,
     ) {}
+
+    /**
+     * Gets the glob options with merged ignore patterns from .rcappsconfig
+     */
+    private async getGlobOptions(): Promise<IOptions> {
+        if (!this.rcappsConfig) {
+            this.rcappsConfig = await readRcappsConfig(this.fd.folder);
+        }
+
+        const ignorePatterns = mergeIgnorePatterns(AppPackager.DefaultIgnorePatterns, this.rcappsConfig);
+
+        return {
+            dot: false,
+            silent: true,
+            ignore: ignorePatterns,
+        };
+    }
 
     public async zipItUp(): Promise<string> {
         const zipName = this.outputFilename;
@@ -129,9 +144,11 @@ export class AppPackager {
     }
 
     // tslint:disable-next-line:promise-function-async
-    private asyncGlob(): Promise<Array<string>> {
+    private async asyncGlob(): Promise<Array<string>> {
+        const globOptions = await this.getGlobOptions();
+        
         return new Promise((resolve, reject) => {
-            glob(this.fd.toZip, AppPackager.GlobOptions, (err, matches) => {
+            glob(this.fd.toZip, globOptions, (err, matches) => {
                 if (err) {
                     reject(err);
                     return;

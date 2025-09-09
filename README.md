@@ -6,6 +6,39 @@ This library provides the core Rocket.Chat App compilation feature for any other
 
 This library exports an `AppsCompiler` class that handles compilation from file system path, and outputs a zip to the file system.
 
+## Configuration
+
+### .rcappsconfig File
+
+You can create a `.rcappsconfig` file in your project root to configure which files should be ignored during compilation and packaging. This file should contain a JSON object with an `ignore` array.
+
+Example `.rcappsconfig`:
+
+```json
+{
+    "ignore": [
+        "*.log",
+        "*.tmp",
+        "debug/**",
+        "temp-*",
+        ".env",
+        ".env.*",
+        "coverage/**",
+        "test/**",
+        "docs/**",
+        ".vscode/**"
+    ]
+}
+```
+
+The ignore patterns support:
+- Exact file names: `debug.log`
+- Glob patterns: `*.log`, `temp-*`
+- Directory patterns: `debug/**`, `node_modules`
+- File extensions: `*.tmp`
+
+Files matching these patterns will be excluded from both source compilation and the final package.
+
 ## Publishing to NPM
 
 This package is published to NPM using the `@rocket.chat` scope. To publish a new version, you need to have access to the `@rocket.chat` scope on NPM. If you don't have access, ask someone who does to add you to the scope.

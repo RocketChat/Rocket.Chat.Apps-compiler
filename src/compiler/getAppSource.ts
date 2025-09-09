@@ -7,21 +7,31 @@ import type {
     ICompilerFile,
     IMapCompilerFile,
 } from "../definition";
+import { readRcappsConfig, shouldIgnoreFile, type IRcappsConfig } from "../misc/rcappsConfigReader";
 
-async function walkDirectory(directory: string): Promise<ICompilerFile[]> {
+async function walkDirectory(directory: string, projectPath: string, rcappsConfig: IRcappsConfig | null): Promise<ICompilerFile[]> {
     const dirents = await fs.readdir(directory, { withFileTypes: true });
     const files = await Promise.all(
         dirents
             .map(async (dirent) => {
                 const res = resolve(directory, dirent.name);
+                const relativePath = relative(projectPath, res);
 
-                const dirsToIgnore = ["node_modules", ".git"];
-                if (dirsToIgnore.some((dir) => res.includes(dir))) {
+                // Default directories to ignore
+                const defaultDirsToIgnore = ["node_modules", ".git"];
+                if (defaultDirsToIgnore.some((dir) => res.includes(dir))) {
                     return null;
                 }
 
+                // Check if this path should be ignored based on .rcappsconfig
+                if (rcappsConfig && rcappsConfig.ignore) {
+                    if (shouldIgnoreFile(relativePath, rcappsConfig.ignore)) {
+                        return null;
+                    }
+                }
+
                 if (dirent.isDirectory() || dirent.isSymbolicLink()) {
-                    return walkDirectory(res);
+                    return walkDirectory(res, projectPath, rcappsConfig);
                 }
 
                 const content = await fs.readFile(res, "utf8");
@@ -93,7 +103,10 @@ function getTypescriptFilesFromProject(
 }
 
 export async function getAppSource(path: string): Promise<IAppSource> {
-    const directoryWalkData: ICompilerFile[] = await walkDirectory(path);
+    // Load .rcappsconfig if it exists
+    const rcappsConfig = await readRcappsConfig(path);
+    
+    const directoryWalkData: ICompilerFile[] = await walkDirectory(path, path, rcappsConfig);
     const projectFiles: ICompilerFile[] = filterProjectFiles(
         path,
         directoryWalkData,
