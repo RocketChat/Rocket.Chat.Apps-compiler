@@ -29,6 +29,7 @@ export class AppPackager {
     ];
 
     private zip = new Yazl.ZipFile();
+
     private globOptions: IOptions;
 
     constructor(
@@ -174,24 +175,30 @@ export class AppPackager {
 
     private readRcAppsConfig(): IRcAppsConfig | null {
         const configPath = path.join(this.fd.folder, ".rcappsconfig");
-        
+
         try {
             if (!fs.existsSync(configPath)) {
                 return null;
             }
 
-            const configContent = fs.readFileSync(configPath, { encoding: "utf-8" });
+            const configContent = fs.readFileSync(configPath, {
+                encoding: "utf-8",
+            });
             const config = JSON.parse(configContent) as IRcAppsConfig;
-            
+
             // Validate that ignoredFiles is an array if present
             if (config.ignoredFiles && !Array.isArray(config.ignoredFiles)) {
-                logger.warn("ignoredFiles in .rcappsconfig must be an array, ignoring it");
+                logger.warn(
+                    "ignoredFiles in .rcappsconfig must be an array, ignoring it",
+                );
                 config.ignoredFiles = [];
             }
 
             return config;
         } catch (error) {
-            logger.warn(`Failed to read .rcappsconfig: ${error instanceof Error ? error.message : String(error)}`);
+            logger.warn(
+                `Failed to read .rcappsconfig: ${error instanceof Error ? error.message : String(error)}`,
+            );
             return null;
         }
     }
