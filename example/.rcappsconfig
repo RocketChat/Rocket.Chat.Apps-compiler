@@ -1,0 +1,11 @@
+{
+    "url": "https://my.rocket.chat",
+    "username": "admin",
+    "password": "password",
+    "ignoredFiles": [
+        "*.log",
+        "temp/**",
+        "debug.txt",
+        "node_modules/**"
+    ]
+}
