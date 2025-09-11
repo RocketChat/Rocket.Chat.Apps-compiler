@@ -193,4 +193,27 @@ describe('AppPackager', () => {
         // Default ignored files (like README.md, *.spec.ts) should still be ignored
         // along with the custom ignored file
     });
+
+    it('should handle .rcappsconfig without ignoredFiles property', async () => {
+        // Create .rcappsconfig without ignoredFiles property
+        const rcAppsConfig = {
+            url: 'https://test.rocket.chat',
+            username: 'testuser',
+            password: 'testpass'
+            // Note: ignoredFiles property is omitted entirely
+        };
+
+        await fs.writeFile(
+            path.join(tempDir, '.rcappsconfig'),
+            JSON.stringify(rcAppsConfig, null, 2)
+        );
+
+        const outputFile = path.join(tempDir, 'output.zip');
+        const packager = new AppPackager(compilerDesc, folderDetails, compilationResult, outputFile);
+        
+        // Should not throw an error, should use only default ignore patterns
+        const result = await packager.zipItUp();
+        expect(result).to.equal(outputFile);
+        expect(fs.existsSync(outputFile)).to.be.true;
+    });
 });
