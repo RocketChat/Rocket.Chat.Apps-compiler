@@ -161,9 +161,18 @@ export class AppPackager {
 
     private initializeGlobOptions(): void {
         const rcAppsConfig = this.readRcAppsConfig();
+        const customIgnoredFiles = (rcAppsConfig?.ignoredFiles || []).map(pattern => {
+            // Convert relative patterns to glob patterns that work with absolute paths
+            if (pattern.startsWith("**/") || pattern.startsWith("/")) {
+                return pattern;
+            }
+            // For patterns like "important.txt" or "*.log", prepend with **/ to match at any level
+            return `**/${pattern}`;
+        });
+        
         const ignoredFiles = [
             ...AppPackager.DEFAULT_IGNORED_FILES,
-            ...(rcAppsConfig?.ignoredFiles || []),
+            ...customIgnoredFiles,
         ];
 
         this.globOptions = {
