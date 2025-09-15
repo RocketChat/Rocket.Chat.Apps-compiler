@@ -6,6 +6,7 @@ import { ICompilerFile } from "./ICompilerFile";
 import { IFiles } from "./IFiles";
 import { IMapCompilerFile } from "./IMapCompilerFile";
 import { CompilerFileNotFoundError } from "./CompilerFileNotFoundError";
+import { IRcAppsConfig } from "./IRcAppsConfig";
 
 export {
     CompilerFileNotFoundError,
@@ -16,6 +17,7 @@ export {
     ICompilerFile,
     IFiles,
     IMapCompilerFile,
+    IRcAppsConfig,
 };
 
 export * from "./ICompilerResult";

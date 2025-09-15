@@ -10,35 +10,36 @@ import type {
     IBundledCompilerResult,
     ICompilerDescriptor,
     ICompilerResult,
+    IRcAppsConfig,
 } from "../definition";
 import { isBundled } from "../bundler";
 import logger from "../misc/logger";
 
 export class AppPackager {
-    public static GlobOptions: IOptions = {
-        dot: false,
-        silent: true,
-        ignore: [
-            "**/README.md",
-            "**/tslint.json",
-            "**/*.js.map",
-            "**/*.ts",
-            "**/*.d.ts",
-            "**/*.spec.ts",
-            "**/*.test.ts",
-            "**/dist/**",
-            "**/.*",
-        ],
-    };
+    private static readonly DEFAULT_IGNORED_FILES = [
+        "**/README.md",
+        "**/tslint.json",
+        "**/*.js.map",
+        "**/*.ts",
+        "**/*.d.ts",
+        "**/*.spec.ts",
+        "**/*.test.ts",
+        "**/dist/**",
+        "**/.*",
+    ];
 
     private zip = new Yazl.ZipFile();
+
+    private globOptions: IOptions;
 
     constructor(
         private readonly compilerDesc: ICompilerDescriptor,
         private fd: FolderDetails,
         private compilationResult: ICompilerResult | IBundledCompilerResult,
         private outputFilename: string,
-    ) {}
+    ) {
+        this.initializeGlobOptions();
+    }
 
     public async zipItUp(): Promise<string> {
         const zipName = this.outputFilename;
@@ -131,7 +132,7 @@ export class AppPackager {
     // tslint:disable-next-line:promise-function-async
     private asyncGlob(): Promise<Array<string>> {
         return new Promise((resolve, reject) => {
-            glob(this.fd.toZip, AppPackager.GlobOptions, (err, matches) => {
+            glob(this.fd.toZip, this.globOptions, (err, matches) => {
                 if (err) {
                     reject(err);
                     return;
@@ -156,5 +157,60 @@ export class AppPackager {
     private isFilePresent(fileList: Array<string>, fileName: string): boolean {
         const targetFilePath = path.join(this.fd.folder, fileName);
         return fileList.includes(targetFilePath);
+    }
+
+    private initializeGlobOptions(): void {
+        const rcAppsConfig = this.readRcAppsConfig();
+        const customIgnoredFiles = (rcAppsConfig?.ignoredFiles || []).map(
+            (pattern) => {
+                // Convert relative patterns to glob patterns that work with absolute paths
+                if (pattern.startsWith("**/") || pattern.startsWith("/")) {
+                    return pattern;
+                }
+                // For patterns like "important.txt" or "*.log", prepend with **/ to match at any level
+                return `**/${pattern}`;
+            },
+        );
+
+        const ignoredFiles = [
+            ...AppPackager.DEFAULT_IGNORED_FILES,
+            ...customIgnoredFiles,
+        ];
+
+        this.globOptions = {
+            dot: false,
+            silent: true,
+            ignore: ignoredFiles,
+        };
+    }
+
+    private readRcAppsConfig(): IRcAppsConfig | null {
+        const configPath = path.join(this.fd.folder, ".rcappsconfig");
+
+        try {
+            if (!fs.existsSync(configPath)) {
+                return null;
+            }
+
+            const configContent = fs.readFileSync(configPath, {
+                encoding: "utf-8",
+            });
+            const config = JSON.parse(configContent) as IRcAppsConfig;
+
+            // Validate that ignoredFiles is an array if present
+            if (config.ignoredFiles && !Array.isArray(config.ignoredFiles)) {
+                logger.warn(
+                    "ignoredFiles in .rcappsconfig must be an array, ignoring it",
+                );
+                config.ignoredFiles = [];
+            }
+
+            return config;
+        } catch (error) {
+            logger.warn(
+                `Failed to read .rcappsconfig: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            return null;
+        }
     }
 }
