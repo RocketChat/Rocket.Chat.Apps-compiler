@@ -19,7 +19,7 @@ describe("AppPackager", () => {
     async function getZipFileList(zipPath: string): Promise<string[]> {
         return new Promise((resolve, reject) => {
             const fileList: string[] = [];
-            
+
             yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
                 if (err) {
                     reject(err);
@@ -87,15 +87,21 @@ describe("AppPackager", () => {
             path.join(tempDir, "important.txt"),
             "important content",
         );
-        await fs.writeFile(path.join(tempDir, "should-be-included.txt"), "should be included");
-        
+        await fs.writeFile(
+            path.join(tempDir, "should-be-included.txt"),
+            "should be included",
+        );
+
         // Create some files that should be ignored by default
         await fs.writeFile(path.join(tempDir, "README.md"), "readme content");
         await fs.writeFile(path.join(tempDir, "test.spec.ts"), "test content");
-        
+
         // Create additional test files for custom ignore patterns
-        await fs.writeFile(path.join(tempDir, "debug.log"), "debug log content");
-        await fs.writeFile(path.join(tempDir, "config.json"), "{\"test\": true}");
+        await fs.writeFile(
+            path.join(tempDir, "debug.log"),
+            "debug log content",
+        );
+        await fs.writeFile(path.join(tempDir, "config.json"), '{"test": true}');
 
         folderDetails = new FolderDetails(tempDir);
         await folderDetails.readInfoFile();
@@ -140,23 +146,47 @@ describe("AppPackager", () => {
         const result = await packager.zipItUp();
         expect(result).to.equal(outputFile);
         expect(fs.existsSync(outputFile)).to.be.true;
-        
+
         // Verify that without .rcappsconfig, only default ignore patterns are applied
         const zipContents = await getZipFileList(outputFile);
-        
+
         // Files that should be ignored by default patterns
-        expect(zipContents).to.not.include("README.md", "README.md should be ignored by default");
-        expect(zipContents).to.not.include("test.spec.ts", "test.spec.ts should be ignored by default");
-        
+        expect(zipContents).to.not.include(
+            "README.md",
+            "README.md should be ignored by default",
+        );
+        expect(zipContents).to.not.include(
+            "test.spec.ts",
+            "test.spec.ts should be ignored by default",
+        );
+
         // Files that would be ignored by custom patterns but should be included without .rcappsconfig
-        expect(zipContents).to.include("important.txt", "important.txt should be included without custom ignore");
-        expect(zipContents).to.include("debug.log", "debug.log should be included without custom ignore");
-        expect(zipContents).to.include("config.json", "config.json should be included without custom ignore");
-        
+        expect(zipContents).to.include(
+            "important.txt",
+            "important.txt should be included without custom ignore",
+        );
+        expect(zipContents).to.include(
+            "debug.log",
+            "debug.log should be included without custom ignore",
+        );
+        expect(zipContents).to.include(
+            "config.json",
+            "config.json should be included without custom ignore",
+        );
+
         // Files that should always be included
-        expect(zipContents).to.include("should-be-included.txt", "should-be-included.txt should be included");
-        expect(zipContents).to.include("package.json", "package.json should be included");
-        expect(zipContents).to.include("icon.png", "icon.png should be included");
+        expect(zipContents).to.include(
+            "should-be-included.txt",
+            "should-be-included.txt should be included",
+        );
+        expect(zipContents).to.include(
+            "package.json",
+            "package.json should be included",
+        );
+        expect(zipContents).to.include(
+            "icon.png",
+            "icon.png should be included",
+        );
     });
 
     it("should ignore files specified in .rcappsconfig", async () => {
@@ -166,10 +196,10 @@ describe("AppPackager", () => {
             username: "testuser",
             password: "testpass",
             ignoredFiles: [
-                "important.txt",    // Should ignore this specific file
-                "*.log",           // Should ignore all .log files
-                "config.json"      // Should ignore this specific JSON file
-            ]
+                "important.txt", // Should ignore this specific file
+                "*.log", // Should ignore all .log files
+                "config.json", // Should ignore this specific JSON file
+            ],
         };
 
         await fs.writeFile(
@@ -188,28 +218,61 @@ describe("AppPackager", () => {
         const result = await packager.zipItUp();
         expect(result).to.equal(outputFile);
         expect(fs.existsSync(outputFile)).to.be.true;
-        
+
         // Verify zip contents to ensure custom ignore patterns are respected
         const zipContents = await getZipFileList(outputFile);
-        
+
         // Files that should be ignored (custom patterns)
-        expect(zipContents).to.not.include("important.txt", "important.txt should be ignored by custom pattern");
-        expect(zipContents).to.not.include("debug.log", "debug.log should be ignored by *.log pattern");
-        expect(zipContents).to.not.include("config.json", "config.json should be ignored by custom pattern");
-        
+        expect(zipContents).to.not.include(
+            "important.txt",
+            "important.txt should be ignored by custom pattern",
+        );
+        expect(zipContents).to.not.include(
+            "debug.log",
+            "debug.log should be ignored by *.log pattern",
+        );
+        expect(zipContents).to.not.include(
+            "config.json",
+            "config.json should be ignored by custom pattern",
+        );
+
         // Files that should be ignored by default patterns
-        expect(zipContents).to.not.include("README.md", "README.md should be ignored by default");
-        expect(zipContents).to.not.include("test.spec.ts", "test.spec.ts should be ignored by default");
-        expect(zipContents).to.not.include(".rcappsconfig", ".rcappsconfig should be ignored by default (.*) pattern");
-        
+        expect(zipContents).to.not.include(
+            "README.md",
+            "README.md should be ignored by default",
+        );
+        expect(zipContents).to.not.include(
+            "test.spec.ts",
+            "test.spec.ts should be ignored by default",
+        );
+        expect(zipContents).to.not.include(
+            ".rcappsconfig",
+            ".rcappsconfig should be ignored by default (.*) pattern",
+        );
+
         // Files that should be included
-        expect(zipContents).to.include("should-be-included.txt", "should-be-included.txt should be included");
-        expect(zipContents).to.include("package.json", "package.json should be included (not matching config.json)");
-        expect(zipContents).to.include("icon.png", "icon.png should be included");
-        
+        expect(zipContents).to.include(
+            "should-be-included.txt",
+            "should-be-included.txt should be included",
+        );
+        expect(zipContents).to.include(
+            "package.json",
+            "package.json should be included (not matching config.json)",
+        );
+        expect(zipContents).to.include(
+            "icon.png",
+            "icon.png should be included",
+        );
+
         // Compiled files should be included
-        expect(zipContents).to.include("TestApp.js", "Compiled file should be included");
-        expect(zipContents).to.include(".packagedby", "Metadata file should be included");
+        expect(zipContents).to.include(
+            "TestApp.js",
+            "Compiled file should be included",
+        );
+        expect(zipContents).to.include(
+            ".packagedby",
+            "Metadata file should be included",
+        );
     });
 
     it("should handle malformed .rcappsconfig gracefully", async () => {
