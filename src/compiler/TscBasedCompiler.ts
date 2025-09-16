@@ -158,7 +158,7 @@ export class TscBasedCompiler {
                     if (m) {
                         const [, full, ln, ch, msg] = m;
                         return {
-                            filename: path.relative(this.sourcePath, full),
+                            filename: path.basename(full),
                             line: +ln - 1,
                             character: +ch - 1,
                             lineText: "",
