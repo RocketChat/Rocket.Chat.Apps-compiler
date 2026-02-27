@@ -41,7 +41,7 @@ class NativeLogger {
             return;
         }
 
-        console[method](`[${now()}]`, ...args);
+        console[method](`[${now()}] ${level.toUpperCase()}`, ...args);
     }
 
     public debug(...args: unknown[]): void {
