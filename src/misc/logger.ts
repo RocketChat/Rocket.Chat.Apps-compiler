@@ -1,15 +1,14 @@
-const pino = require("pino");
-
+import pino from "pino";
 
 const logger = pino({
     level: process.env.LOG_LEVEL || "info",
     timestamp: pino.stdTimeFunctions.isoTime,
     transport: {
-        target: 'pino-pretty',
+        target: "pino-pretty",
         options: {
-            colorize: true
-        }
-    }
+            colorize: true,
+        },
+    },
 });
 
 export default logger;
