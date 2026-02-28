@@ -20,7 +20,8 @@ const normalizeLevel = (level: string | undefined): LogLevel => {
 
 const now = (): string => {
     const date = new Date();
-    const pad = (value: number, size = 2): string => value.toString().padStart(size, "0");
+    const pad = (value: number, size = 2): string =>
+        value.toString().padStart(size, "0");
 
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
 };
@@ -36,7 +37,11 @@ class NativeLogger {
         return LEVEL_ORDER[level] >= LEVEL_ORDER[this.level];
     }
 
-    private log(method: "debug" | "info" | "warn" | "error", level: LogLevel, args: unknown[]): void {
+    private log(
+        method: "debug" | "info" | "warn" | "error",
+        level: LogLevel,
+        args: unknown[],
+    ): void {
         if (!this.shouldLog(level)) {
             return;
         }
