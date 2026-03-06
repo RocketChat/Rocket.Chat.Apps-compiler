@@ -26,7 +26,7 @@ export async function compile(
     sourceDir = path.resolve(sourceDir);
     outputFile = path.resolve(outputFile);
 
-    logger.info("Compiling app at ", sourceDir);
+    logger.info(`Compiling app at ${sourceDir}`);
 
     const sourceAppManifest = path.format({ dir: sourceDir, base: "app.json" });
 
@@ -75,22 +75,20 @@ export async function compile(
             return result;
         }
 
-        logger.debug("Compilation complete, inspection \n", inspect(result));
+        logger.debug(`Compilation complete, inspection\n${inspect(result)}`);
         logger.debug("Starting bundling...");
 
         await compiler.bundle();
 
         logger.debug(
-            "Compilation complete, inspection \n",
-            inspect(compiler.getLatestCompilationResult()),
+            `Compilation complete, inspection\n${inspect(compiler.getLatestCompilationResult())}`,
         );
         logger.debug("Starting packaging...");
 
         await compiler.outputZip(outputFile);
 
         logger.info(
-            `Compilation successful! Took ${result.duration / 1000}s. Package saved at `,
-            outputFile,
+            `Compilation successful! Took ${result.duration / 1000}s. Package saved at ${outputFile}`,
         );
 
         return compiler.getLatestCompilationResult();

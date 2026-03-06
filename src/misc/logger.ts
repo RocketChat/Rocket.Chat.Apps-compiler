@@ -1,8 +1,14 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
-const logger = require("simple-node-logger").createSimpleLogger({
-    timestampFormat: "YYYY-MM-DD HH:mm:ss.SSS",
-});
+import pino from "pino";
 
-logger.setLevel(process.env.LOG_LEVEL || "info");
+const logger = pino({
+    level: process.env.LOG_LEVEL || "info",
+    timestamp: pino.stdTimeFunctions.isoTime,
+    transport: {
+        target: "pino-pretty",
+        options: {
+            colorize: true,
+        },
+    },
+});
 
 export default logger;
