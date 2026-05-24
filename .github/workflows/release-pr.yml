@@ -1,0 +1,62 @@
+name: Create release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump type
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Bump version & open release PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: package.json
+          cache: npm
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        run: npm version ${{ inputs.bump }} --no-git-tag-version
+
+      - name: Create release branch, PR and draft release
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          git checkout -b "release/v${VERSION}"
+          git status
+          # git add package.json package-lock.json
+          git commit -am "Release v${VERSION}"
+          git push origin "release/v${VERSION}"
+          gh pr create \
+            --title "Release v${VERSION}" \
+            --body "Bumps version to v${VERSION}. Merging this PR will automatically publish the release and trigger the NPM publish." \
+            --base master \
+            --head "release/v${VERSION}"
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --draft \
+            --generate-notes
+          gh release view "v${VERSION}" --json body --jq '.body' > .release-notes.md
+          printf '\n\n\n :warning: Merging this PR will automatically publish the release and the NPM package' >> .release-notes.md
+          gh pr edit "release/v${VERSION}" --body "$(cat .release-notes.md)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
