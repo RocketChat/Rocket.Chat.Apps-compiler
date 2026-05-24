@@ -56,8 +56,12 @@ export async function bundleCompilation(
                             }
 
                             // apps-engine is provided by the host; never bundle it
-                            if (/^@rocket\.chat\/apps-engine/.test(args.path)) {
-                                return { external: true };
+                            if (
+                                /^@rocket\.chat\/apps-engine(?:\/|$)/.test(
+                                    args.path,
+                                )
+                            ) {
+                                return { external: true, path: args.path };
                             }
 
                             const isRelative =
