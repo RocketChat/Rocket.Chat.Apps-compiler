@@ -9,10 +9,9 @@
     "engineStrict": true,
     "scripts": {
         "test": "mocha -r ts-node/register './tests/**/*.spec.ts'",
-        "test:watch": "mocha --require ts-node/register --watch --watch-files src, 'tests/**/*.ts'",
         "build": "rm -rf dist && mkdir dist && cp package.json dist && tsc",
         "build:prod": "npm run build -- --sourceMap false --declarationMap false && cp LICENSE dist && cp README.md dist",
-        "lint": "npx eslint src/**/*.ts",
+        "lint": "npx eslint src/* tests/*",
         "release": "npm run build:prod && cd dist && npm publish --access public"
     },
     "repository": {

@@ -5,7 +5,6 @@ import typescript from "typescript";
 import type { IAppSource, ICompilerFile } from "../src/definition";
 import { AppsEngineValidator } from "../src/compiler/AppsEngineValidator";
 import { TypescriptCompiler } from "../src/compiler/TypescriptCompiler";
-import { inspect } from "util";
 
 describe("TypescriptCompiler", () => {
     let validator: AppsEngineValidator;
@@ -115,10 +114,7 @@ describe("TypescriptCompiler", () => {
             sourceFiles,
         });
 
-        const appDiagnostics = result.diagnostics.filter(
-            (d) => d.filename === "TestApp.ts",
-        );
-        expect(appDiagnostics).to.be.empty;
+        expect(result.diagnostics).to.be.empty;
         expect(result.implemented).to.deep.equal(["IPostMessageSent"]);
     });
 
