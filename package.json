@@ -4,8 +4,7 @@
     "description": "The Rocket.Chat apps compiler",
     "main": "index.js",
     "engines": {
-        "node": "^22.0.0",
-        "typescript": "^5.8.3"
+        "node": ">=22.0.0"
     },
     "engineStrict": true,
     "scripts": {
