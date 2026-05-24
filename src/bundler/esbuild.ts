@@ -55,6 +55,15 @@ export async function bundleCompilation(
                                 return;
                             }
 
+                            // apps-engine is provided by the host; never bundle it
+                            if (
+                                /^@rocket\.chat\/apps-engine(?:\/|$)/.test(
+                                    args.path,
+                                )
+                            ) {
+                                return { external: true, path: args.path };
+                            }
+
                             const isRelative =
                                 args.path.startsWith("./") ||
                                 args.path.startsWith("../");
@@ -122,11 +131,6 @@ export async function bundleCompilation(
                                     namespace: "file",
                                     path: nodeModulePath,
                                 };
-                            }
-
-                            // for @rocket.chat/apps-engine imports, let esbuild bundle via "file"
-                            if (/^@rocket\.chat\/apps-engine/.test(args.path)) {
-                                return { namespace: "file", path: args.path };
                             }
 
                             // otherwise treat as external
