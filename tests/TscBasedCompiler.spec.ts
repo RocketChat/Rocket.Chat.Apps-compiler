@@ -122,7 +122,32 @@ describe('TscBasedCompiler', () => {
         expect(diagnostics[0]).to.have.property('filename', 'Bad.ts');
     });
 
-    it('detects implemented interfaces in a “real” App class', async () => {
+    it("throws on invalid permission names", async () => {
+        const badAppInfo = {
+            ...baseAppInfo,
+            permissions: [{ name: "not-a-real-permission-xyz" }],
+        };
+
+        const sourceFiles: Record<string, ICompilerFile> = {
+            "Foo.ts": {
+                name: "Foo.ts",
+                content: "export class Foo {}",
+                version: 1,
+            },
+        };
+
+        try {
+            await compiler.transpileSource({
+                appInfo: badAppInfo,
+                sourceFiles,
+            });
+            expect.fail("should have thrown on invalid permission");
+        } catch (e: any) {
+            expect(e.message).to.match(/Invalid permission/);
+        }
+    });
+
+    it("detects implemented interfaces in a “real” App class", async () => {
         // override to point at TestApp.ts
         const testAppInfo = { ...baseAppInfo, classFile: 'TestApp.ts' };
         await fs.writeFile(
