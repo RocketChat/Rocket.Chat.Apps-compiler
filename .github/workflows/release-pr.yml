@@ -42,8 +42,9 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           git checkout -b "release/v${VERSION}"
-          git add package.json
-          git commit -m "Release v${VERSION}"
+          git status
+          # git add package.json package-lock.json
+          git commit -am "Release v${VERSION}"
           git push origin "release/v${VERSION}"
           gh pr create \
             --title "Release v${VERSION}" \
@@ -55,7 +56,7 @@ jobs:
             --draft \
             --generate-notes
           gh release view "v${VERSION}" --json body --jq '.body' > .release-notes.md
-          echo '\n\n\n :warning: Merging this PR will automatically publish the release and the NPM package' >> .release-notes.md
+          printf '\n\n\n :warning: Merging this PR will automatically publish the release and the NPM package' >> .release-notes.md
           gh pr edit "release/v${VERSION}" --body "$(cat .release-notes.md)"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
