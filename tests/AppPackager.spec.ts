@@ -360,6 +360,38 @@ describe("AppPackager", () => {
         // along with the custom ignored file
     });
 
+    it("should use forward slashes in zip entry paths for nested files", async () => {
+        // Create files in subdirectories to exercise the path separator fix
+        await fs.mkdirp(path.join(tempDir, "lib"));
+        await fs.mkdirp(path.join(tempDir, "assets", "icons"));
+        await fs.writeFile(
+            path.join(tempDir, "lib", "helper.json"),
+            '{"ok":true}',
+        );
+        await fs.writeFile(
+            path.join(tempDir, "assets", "icons", "logo.png"),
+            "fake png",
+        );
+
+        const outputFile = path.join(tempDir, "output.zip");
+        const packager = new AppPackager(
+            compilerDesc,
+            folderDetails,
+            compilationResult,
+            outputFile,
+        );
+
+        await packager.zipItUp();
+
+        const zipContents = await getZipFileList(outputFile);
+
+        // Regardless of the host OS separator, zip entry paths must use "/"
+        expect(zipContents).to.include("lib/helper.json");
+        expect(zipContents).to.include("assets/icons/logo.png");
+        expect(zipContents).to.not.include("lib\\helper.json");
+        expect(zipContents).to.not.include("assets\\icons\\logo.png");
+    });
+
     it("should handle .rcappsconfig without ignoredFiles property", async () => {
         // Create .rcappsconfig without ignoredFiles property
         const rcAppsConfig = {
