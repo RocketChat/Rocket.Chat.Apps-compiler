@@ -11,7 +11,7 @@ import { TypescriptCompiler } from "../src/compiler/TypescriptCompiler";
 import { TscBasedCompiler } from "../src/compiler/TscBasedCompiler";
 
 // TypescriptCompiler mutates its sourceFiles argument in-place (renames .ts keys to .js).
-// Always pass a deep clone so the two compilers don't interfere with each other.
+// Always pass a clone so the two compilers don't interfere with each other.
 function cloneFiles(
     files: Record<string, ICompilerFile>,
 ): Record<string, ICompilerFile> {
