@@ -1,5 +1,5 @@
 import { promises as fs } from "fs";
-import { resolve, relative } from "path";
+import path from "path";
 import type { IAppInfo } from "@rocket.chat/apps-engine/definition/metadata";
 
 import type {
@@ -13,7 +13,7 @@ async function walkDirectory(directory: string): Promise<ICompilerFile[]> {
     const files = await Promise.all(
         dirents
             .map(async (dirent) => {
-                const res = resolve(directory, dirent.name);
+                const res = path.resolve(directory, dirent.name);
 
                 const dirsToIgnore = ["node_modules", ".git"];
                 if (dirsToIgnore.some((dir) => res.includes(dir))) {
@@ -49,7 +49,9 @@ function filterProjectFiles(
             // Get the file names like it was inside the project's directory
             .map((file: ICompilerFile) => ({
                 ...file,
-                name: relative(projectDirectory, file.name),
+                name: path
+                    .relative(projectDirectory, file.name)
+                    .replace(/\\/g, "/"),
             }))
     );
 }

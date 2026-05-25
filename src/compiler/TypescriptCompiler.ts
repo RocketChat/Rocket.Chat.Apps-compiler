@@ -91,7 +91,9 @@ export class TypescriptCompiler {
                 throw new Error(`Invalid TypeScript file: "${key}".`);
             }
 
-            result.files[key].name = path.normalize(result.files[key].name);
+            result.files[key].name = path.posix.normalize(
+                result.files[key].name,
+            );
         });
 
         let hasExternalDependencies = false;
@@ -121,13 +123,13 @@ export class TypescriptCompiler {
         const host = {
             getScriptFileNames: () => Object.keys(result.files),
             getScriptVersion: (fileName) => {
-                fileName = path.normalize(fileName);
+                fileName = path.posix.normalize(fileName.replace(/\\/g, "/"));
                 const file =
                     result.files[fileName] || this.getLibraryFile(fileName);
                 return file?.version?.toString();
             },
             getScriptSnapshot: (fileName) => {
-                fileName = path.normalize(fileName);
+                fileName = path.posix.normalize(fileName.replace(/\\/g, "/"));
                 const file =
                     result.files[fileName] || this.getLibraryFile(fileName);
 
@@ -317,10 +319,20 @@ export class TypescriptCompiler {
     }
 
     private resolvePath(containingFile: string, moduleName: string): string {
-        const currentFolderPath = path
-            .dirname(containingFile)
-            .replace(this.sourcePath.replace(/\/$/, ""), "");
-        const modulePath = path.join(currentFolderPath, moduleName);
+        const posixSourcePath = this.sourcePath
+            .replace(/\\/g, "/")
+            .replace(/\/$/, "");
+        const posixContainingDir = path.posix.dirname(
+            containingFile.replace(/\\/g, "/"),
+        );
+        const currentFolderPath = posixContainingDir.replace(
+            posixSourcePath,
+            "",
+        );
+        const modulePath = path.posix.join(
+            currentFolderPath || ".",
+            moduleName,
+        );
 
         // Let's ensure we search for the App's modules first
         const transformedModule =
@@ -370,7 +382,7 @@ export class TypescriptCompiler {
             return undefined;
         }
 
-        const norm = path.normalize(fileName);
+        const norm = path.posix.normalize(fileName.replace(/\\/g, "/"));
 
         if (this.libraryFiles[norm]) {
             return this.libraryFiles[norm];
@@ -396,7 +408,7 @@ export class TypescriptCompiler {
 
         return (
             file.name.trim() !== "" &&
-            path.normalize(file.name) &&
+            path.posix.normalize(file.name) &&
             file.content.trim() !== ""
         );
     }

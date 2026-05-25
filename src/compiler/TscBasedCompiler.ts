@@ -211,7 +211,7 @@ export class TscBasedCompiler {
                 withFileTypes: true,
             })) {
                 const full = path.join(dir, entry.name);
-                const rel = path.join(base, entry.name);
+                const rel = path.posix.join(base, entry.name);
                 if (entry.isDirectory()) {
                     await collect(full, rel);
                 } else if (entry.isFile() && rel.endsWith(".js")) {

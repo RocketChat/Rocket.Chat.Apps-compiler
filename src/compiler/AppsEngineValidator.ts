@@ -135,8 +135,8 @@ export class AppsEngineValidator {
                     return undefined;
                 }
 
-                filepath = path.normalize(
-                    path.join(path.dirname(filename), filepath),
+                filepath = path.posix.normalize(
+                    path.posix.join(path.posix.dirname(filename), filepath),
                 );
 
                 // Handles import of other files in app's source

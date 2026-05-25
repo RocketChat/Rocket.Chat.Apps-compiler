@@ -51,7 +51,7 @@ export class Utilities {
     }
 
     public static transformModuleForCustomRequire(moduleName: string): string {
-        return `${path
+        return `${path.posix
             .normalize(moduleName)
             .replace(/\.\.?\//g, "")
             .replace(/^\//, "")}.ts`;
