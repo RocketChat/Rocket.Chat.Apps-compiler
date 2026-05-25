@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as fallbackTypescript from "typescript";
-
 import { createRequire } from "module";
+
 import { getAppSource } from "./compiler/getAppSource";
 import type {
     IBundledCompilerResult,
@@ -95,7 +95,7 @@ export class AppsCompiler {
             // @NOTE this is important for generating the zip file with the correct name
             await fd.readInfoFile();
         } catch (e) {
-            console.error(e && e.message ? e.message : e);
+            console.error(e?.message || e);
             return;
         }
 

@@ -47,6 +47,7 @@ export class TypescriptCompiler {
             emitDecoratorMetadata: true,
             experimentalDecorators: true,
             types: ["node"],
+            skipLibCheck: true,
             // Set this to true if you would like to see the module resolution process
             traceResolution: false,
         };

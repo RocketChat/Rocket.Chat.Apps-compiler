@@ -1,40 +1,40 @@
-import { expect } from 'chai';
-import { describe, it, beforeEach, afterEach } from 'mocha';
-import { promises as fs } from 'fs';
-import os from 'os';
-import path from 'path';
+import { expect } from "chai";
+import { describe, it, beforeEach, afterEach } from "mocha";
+import { promises as fs } from "fs";
+import os from "os";
+import path from "path";
 
-import { IAppSource, ICompilerFile } from '../src/definition';
-import { AppsEngineValidator } from '../src/compiler/AppsEngineValidator';
-import { TscBasedCompiler } from '../src/compiler/TscBasedCompiler';
+import type { IAppSource, ICompilerFile } from "../src/definition";
+import { AppsEngineValidator } from "../src/compiler/AppsEngineValidator";
+import { TscBasedCompiler } from "../src/compiler/TscBasedCompiler";
 
-describe('TscBasedCompiler', () => {
+describe("TscBasedCompiler", () => {
     let tmpDir: string;
     let validator: AppsEngineValidator;
     let compiler: TscBasedCompiler;
 
     // minimal appInfo shape
-    const baseAppInfo: IAppSource['appInfo'] = {
-        id: '4f7788b8-efe7-47aa-8284-4b59f65ea034',
-        nameSlug: 'test',
+    const baseAppInfo: IAppSource["appInfo"] = {
+        id: "4f7788b8-efe7-47aa-8284-4b59f65ea034",
+        nameSlug: "test",
         author: {
-            name: 'Test Author',
-            support: '',
-            homepage: '',
+            name: "Test Author",
+            support: "",
+            homepage: "",
         },
-        description: 'Test App',
-        iconFile: 'icon.png',
+        description: "Test App",
+        iconFile: "icon.png",
         implements: [],
-        name: 'test',
-        version: '1.0.0',
-        classFile: 'Foo.ts', // default; tests will override as needed
+        name: "test",
+        version: "1.0.0",
+        classFile: "Foo.ts", // default; tests will override as needed
         permissions: [],
-        requiredApiVersion: '',
+        requiredApiVersion: "",
     };
 
     beforeEach(async () => {
         // 1) create a fresh temp dir
-        const prefix = path.join(os.tmpdir(), 'rc-test-');
+        const prefix = path.join(os.tmpdir(), "rc-test-");
         tmpDir = await fs.mkdtemp(prefix);
 
         // 2) write a minimal app.json so createRequire() works
@@ -45,9 +45,9 @@ describe('TscBasedCompiler', () => {
             permissions: baseAppInfo.permissions,
         };
         await fs.writeFile(
-            path.join(tmpDir, 'app.json'),
+            path.join(tmpDir, "app.json"),
             JSON.stringify(appJson),
-            'utf8',
+            "utf8",
         );
 
         // 3) instantiate and stub out inheritance checking
@@ -63,11 +63,11 @@ describe('TscBasedCompiler', () => {
         await fs.rm(tmpDir, { recursive: true, force: true });
     });
 
-    it('compiles a simple class with no errors', async () => {
+    it("compiles a simple class with no errors", async () => {
         // we only care here that TS compiles and interfaces are extracted
         const sourceFiles: Record<string, ICompilerFile> = {
-            'Foo.ts': {
-                name: 'Foo.ts',
+            "Foo.ts": {
+                name: "Foo.ts",
                 content: `
           export interface IWidget { run(): void }
           export class Foo implements IWidget {
@@ -86,29 +86,29 @@ describe('TscBasedCompiler', () => {
         });
 
         expect(result.diagnostics).to.be.empty;
-        expect(Object.keys(result.files)).to.include('Foo.js');
-        expect(result.implemented).to.deep.equal(['IWidget']);
-        expect(result.mainFile?.name).to.equal('Foo.js');
+        expect(Object.keys(result.files)).to.include("Foo.js");
+        expect(result.implemented).to.deep.equal(["IWidget"]);
+        expect(result.mainFile?.name).to.equal("Foo.js");
     });
 
-    it('produces diagnostics on invalid TS', async () => {
+    it("produces diagnostics on invalid TS", async () => {
         // override to point at Bad.ts
-        const badAppInfo = { ...baseAppInfo, classFile: 'Bad.ts' };
+        const badAppInfo = { ...baseAppInfo, classFile: "Bad.ts" };
         await fs.writeFile(
-            path.join(tmpDir, 'app.json'),
+            path.join(tmpDir, "app.json"),
             JSON.stringify({
                 id: badAppInfo.id,
                 version: badAppInfo.version,
                 classFile: badAppInfo.classFile,
                 permissions: badAppInfo.permissions,
             }),
-            'utf8',
+            "utf8",
         );
 
         const sourceFiles: Record<string, ICompilerFile> = {
-            'Bad.ts': {
-                name: 'Bad.ts',
-                content: 'const x: string = 123;',
+            "Bad.ts": {
+                name: "Bad.ts",
+                content: "const x: string = 123;",
                 version: 1,
             },
         };
@@ -119,26 +119,51 @@ describe('TscBasedCompiler', () => {
         });
 
         expect(diagnostics).to.not.be.empty;
-        expect(diagnostics[0]).to.have.property('filename', 'Bad.ts');
+        expect(diagnostics[0]).to.have.property("filename", "Bad.ts");
     });
 
-    it('detects implemented interfaces in a “real” App class', async () => {
+    it("throws on invalid permission names", async () => {
+        const badAppInfo = {
+            ...baseAppInfo,
+            permissions: [{ name: "not-a-real-permission-xyz" }],
+        };
+
+        const sourceFiles: Record<string, ICompilerFile> = {
+            "Foo.ts": {
+                name: "Foo.ts",
+                content: "export class Foo {}",
+                version: 1,
+            },
+        };
+
+        try {
+            await compiler.transpileSource({
+                appInfo: badAppInfo,
+                sourceFiles,
+            });
+            expect.fail("should have thrown on invalid permission");
+        } catch (e: any) {
+            expect(e.message).to.match(/Invalid permission/);
+        }
+    });
+
+    it("detects implemented interfaces in a “real” App class", async () => {
         // override to point at TestApp.ts
-        const testAppInfo = { ...baseAppInfo, classFile: 'TestApp.ts' };
+        const testAppInfo = { ...baseAppInfo, classFile: "TestApp.ts" };
         await fs.writeFile(
-            path.join(tmpDir, 'app.json'),
+            path.join(tmpDir, "app.json"),
             JSON.stringify({
                 id: testAppInfo.id,
                 version: testAppInfo.version,
                 classFile: testAppInfo.classFile,
                 permissions: testAppInfo.permissions,
             }),
-            'utf8',
+            "utf8",
         );
 
         const sourceFiles: Record<string, ICompilerFile> = {
-            'TestApp.ts': {
-                name: 'TestApp.ts',
+            "TestApp.ts": {
+                name: "TestApp.ts",
                 content: `
           export abstract class App {}
 
@@ -165,6 +190,49 @@ describe('TscBasedCompiler', () => {
         });
 
         expect(result.diagnostics).to.be.empty;
-        expect(result.implemented).to.deep.equal(['IPostMessageSent']);
+        expect(result.implemented).to.deep.equal(["IPostMessageSent"]);
+    });
+
+    it("uses default options when no tsconfig.json is present", async () => {
+        // Implicit-any parameter: fine under default strict:false
+        const sourceFiles: Record<string, ICompilerFile> = {
+            "Foo.ts": {
+                name: "Foo.ts",
+                content: "export function greet(name) { return name; }",
+                version: 1,
+            },
+        };
+
+        const result = await compiler.transpileSource({
+            appInfo: baseAppInfo,
+            sourceFiles,
+        });
+
+        expect(result.diagnostics).to.be.empty;
+    });
+
+    it("respects noImplicitAny from the app tsconfig.json", async () => {
+        await fs.writeFile(
+            path.join(tmpDir, "tsconfig.json"),
+            JSON.stringify({ compilerOptions: { noImplicitAny: true } }),
+            "utf8",
+        );
+
+        // Same source as above — now fails because noImplicitAny is on
+        const sourceFiles: Record<string, ICompilerFile> = {
+            "Foo.ts": {
+                name: "Foo.ts",
+                content: "export function greet(name) { return name; }",
+                version: 1,
+            },
+        };
+
+        const result = await compiler.transpileSource({
+            appInfo: baseAppInfo,
+            sourceFiles,
+        });
+
+        expect(result.diagnostics).to.not.be.empty;
+        expect(result.diagnostics[0].filename).to.equal("Foo.ts");
     });
 });
