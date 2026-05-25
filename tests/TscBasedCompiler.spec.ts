@@ -192,4 +192,47 @@ describe("TscBasedCompiler", () => {
         expect(result.diagnostics).to.be.empty;
         expect(result.implemented).to.deep.equal(["IPostMessageSent"]);
     });
+
+    it("uses default options when no tsconfig.json is present", async () => {
+        // Implicit-any parameter: fine under default strict:false
+        const sourceFiles: Record<string, ICompilerFile> = {
+            "Foo.ts": {
+                name: "Foo.ts",
+                content: "export function greet(name) { return name; }",
+                version: 1,
+            },
+        };
+
+        const result = await compiler.transpileSource({
+            appInfo: baseAppInfo,
+            sourceFiles,
+        });
+
+        expect(result.diagnostics).to.be.empty;
+    });
+
+    it("respects noImplicitAny from the app tsconfig.json", async () => {
+        await fs.writeFile(
+            path.join(tmpDir, "tsconfig.json"),
+            JSON.stringify({ compilerOptions: { noImplicitAny: true } }),
+            "utf8",
+        );
+
+        // Same source as above — now fails because noImplicitAny is on
+        const sourceFiles: Record<string, ICompilerFile> = {
+            "Foo.ts": {
+                name: "Foo.ts",
+                content: "export function greet(name) { return name; }",
+                version: 1,
+            },
+        };
+
+        const result = await compiler.transpileSource({
+            appInfo: baseAppInfo,
+            sourceFiles,
+        });
+
+        expect(result.diagnostics).to.not.be.empty;
+        expect(result.diagnostics[0].filename).to.equal("Foo.ts");
+    });
 });
