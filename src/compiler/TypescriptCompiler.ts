@@ -2,7 +2,6 @@ import { EventEmitter } from "events";
 import fs from "fs";
 import path from "path";
 
-import type { IAppInfo } from "@rocket.chat/apps-engine/definition/metadata";
 import type {
     CompilerOptions,
     EmitOutput,
@@ -59,10 +58,24 @@ export class TypescriptCompiler {
         appInfo,
         sourceFiles: files,
     }: IAppSource): ICompilerResult {
+        // Normalize all file keys, file names, and classFile to POSIX separators
+        // once up front so getScriptFileNames(), getScriptVersion(), getScriptSnapshot(),
+        // and all subsequent lookups into result.files operate on consistent keys.
+        const posixClassFile = appInfo.classFile.replace(/\\/g, "/");
+        const normalizedFiles: IMapCompilerFile = {};
+        for (const [key, file] of Object.entries(files)) {
+            const posixKey = key.replace(/\\/g, "/");
+            normalizedFiles[posixKey] = {
+                ...file,
+                name: file.name.replace(/\\/g, "/"),
+            };
+        }
+        files = normalizedFiles;
+
         if (
-            !appInfo.classFile ||
-            !files[appInfo.classFile] ||
-            !this.isValidFile(files[appInfo.classFile])
+            !posixClassFile ||
+            !files[posixClassFile] ||
+            !this.isValidFile(files[posixClassFile])
         ) {
             throw new Error(
                 `Invalid App package. Could not find the classFile (${appInfo.classFile}) file.`,
@@ -91,7 +104,9 @@ export class TypescriptCompiler {
                 throw new Error(`Invalid TypeScript file: "${key}".`);
             }
 
-            result.files[key].name = path.normalize(result.files[key].name);
+            result.files[key].name = path.posix.normalize(
+                result.files[key].name,
+            );
         });
 
         let hasExternalDependencies = false;
@@ -121,13 +136,13 @@ export class TypescriptCompiler {
         const host = {
             getScriptFileNames: () => Object.keys(result.files),
             getScriptVersion: (fileName) => {
-                fileName = path.normalize(fileName);
+                fileName = path.posix.normalize(fileName.replace(/\\/g, "/"));
                 const file =
                     result.files[fileName] || this.getLibraryFile(fileName);
                 return file?.version?.toString();
             },
             getScriptSnapshot: (fileName) => {
-                fileName = path.normalize(fileName);
+                fileName = path.posix.normalize(fileName.replace(/\\/g, "/"));
                 const file =
                     result.files[fileName] || this.getLibraryFile(fileName);
 
@@ -217,7 +232,7 @@ export class TypescriptCompiler {
 
         result.implemented = this.getImplementedInterfaces(
             languageService,
-            appInfo,
+            posixClassFile,
         );
 
         Object.defineProperty(result, "diagnostics", {
@@ -240,11 +255,10 @@ export class TypescriptCompiler {
             file.compiled = output.outputFiles[0].text;
         });
 
-        result.mainFile =
-            result.files[appInfo.classFile.replace(/\.ts$/, ".js")];
+        result.mainFile = result.files[posixClassFile.replace(/\.ts$/, ".js")];
 
         this.appValidator.checkInheritance(
-            appInfo.classFile.replace(/\.ts$/, ""),
+            posixClassFile.replace(/\.ts$/, ""),
             result,
         );
 
@@ -317,10 +331,20 @@ export class TypescriptCompiler {
     }
 
     private resolvePath(containingFile: string, moduleName: string): string {
-        const currentFolderPath = path
-            .dirname(containingFile)
-            .replace(this.sourcePath.replace(/\/$/, ""), "");
-        const modulePath = path.join(currentFolderPath, moduleName);
+        const posixSourcePath = this.sourcePath
+            .replace(/\\/g, "/")
+            .replace(/\/$/, "");
+        const posixContainingDir = path.posix.dirname(
+            containingFile.replace(/\\/g, "/"),
+        );
+        const currentFolderPath = posixContainingDir.replace(
+            posixSourcePath,
+            "",
+        );
+        const modulePath = path.posix.join(
+            currentFolderPath || ".",
+            moduleName,
+        );
 
         // Let's ensure we search for the App's modules first
         const transformedModule =
@@ -332,13 +356,11 @@ export class TypescriptCompiler {
 
     private getImplementedInterfaces(
         languageService: LanguageService,
-        appInfo: IAppInfo,
+        classFile: string,
     ): ICompilerResult["implemented"] {
         const result: ICompilerResult["implemented"] = [];
 
-        const src = languageService
-            .getProgram()
-            .getSourceFile(appInfo.classFile);
+        const src = languageService.getProgram().getSourceFile(classFile);
 
         this.ts.forEachChild(src, (n) => {
             if (!this.ts.isClassDeclaration(n)) {
@@ -370,7 +392,7 @@ export class TypescriptCompiler {
             return undefined;
         }
 
-        const norm = path.normalize(fileName);
+        const norm = path.posix.normalize(fileName.replace(/\\/g, "/"));
 
         if (this.libraryFiles[norm]) {
             return this.libraryFiles[norm];
@@ -394,10 +416,6 @@ export class TypescriptCompiler {
             return false;
         }
 
-        return (
-            file.name.trim() !== "" &&
-            path.normalize(file.name) &&
-            file.content.trim() !== ""
-        );
+        return file.name.trim() !== "" && file.content.trim() !== "";
     }
 }

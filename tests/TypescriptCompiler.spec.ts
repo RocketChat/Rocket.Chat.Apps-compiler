@@ -118,6 +118,30 @@ describe("TypescriptCompiler", () => {
         expect(result.implemented).to.deep.equal(["IPostMessageSent"]);
     });
 
+    it("normalizes backslash separators in sourceFiles keys and classFile (Windows paths)", () => {
+        // Simulate an IAppSource constructed on Windows where path.join produces
+        // backslash-separated keys and classFile comes from app.json with backslashes.
+        const appInfo = { ...baseAppInfo, classFile: "lib\\Foo.ts" };
+
+        const sourceFiles: Record<string, ICompilerFile> = {
+            "lib\\Foo.ts": {
+                name: "lib\\Foo.ts",
+                content: "export class Foo {}",
+                version: 1,
+            },
+        };
+
+        const result = compiler.transpileSource({ appInfo, sourceFiles });
+
+        expect(result.diagnostics).to.be.empty;
+        // Keys in result.files must use forward slashes regardless of input
+        expect(Object.keys(result.files)).to.include("lib/Foo.js");
+        expect(Object.keys(result.files)).to.not.include("lib\\Foo.js");
+        // mainFile must be resolved correctly via the normalised classFile
+        expect(result.mainFile).to.exist;
+        expect(result.mainFile.name).to.equal("lib/Foo.js");
+    });
+
     it("throws on invalid permission names", () => {
         const badAppInfo = {
             ...baseAppInfo,

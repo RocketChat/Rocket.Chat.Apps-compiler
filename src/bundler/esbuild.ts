@@ -1,4 +1,3 @@
-import * as os from "os";
 import path from "path";
 import type { OnLoadArgs, OnResolveArgs, PluginBuild } from "esbuild";
 import { build } from "esbuild";
@@ -7,8 +6,6 @@ import type { ICompilerResult } from "../definition";
 import type { IBundledCompilerResult } from "../definition/ICompilerResult";
 import type { AppsEngineValidator } from "../compiler/AppsEngineValidator";
 
-const isWin = os.platform() === "win32";
-
 function normalizeAppModulePath(modulePath: string, parentDir: string): string {
     const isRelative = /\.\.?\//.test(modulePath);
 
@@ -16,12 +13,8 @@ function normalizeAppModulePath(modulePath: string, parentDir: string): string {
         return modulePath;
     }
 
-    const baseDir = path.dirname(parentDir);
-    const resolvedPath = isWin
-        ? path.join(baseDir, modulePath)
-        : path.resolve("/", baseDir, modulePath).substring(1);
-
-    return `${resolvedPath}.js`;
+    const baseDir = path.posix.dirname(parentDir);
+    return `${path.posix.join(baseDir, modulePath)}.js`;
 }
 
 export async function bundleCompilation(
@@ -70,13 +63,10 @@ export async function bundleCompilation(
 
                             if (isRelative) {
                                 // normalize into the key you used in r.files
-                                let modulePath = normalizeAppModulePath(
+                                const modulePath = normalizeAppModulePath(
                                     args.path,
                                     args.importer,
                                 );
-                                modulePath = modulePath
-                                    .replace(/^:\\/, "")
-                                    .replace(/\\/g, "/");
                                 if (r.files[modulePath]) {
                                     return {
                                         namespace: "app-source",

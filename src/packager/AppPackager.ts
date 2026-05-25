@@ -97,7 +97,9 @@ export class AppPackager {
 
         await Promise.all(
             matches.map(async (realPath) => {
-                const zipPath = path.relative(this.fd.folder, realPath);
+                const zipPath = path
+                    .relative(this.fd.folder, realPath)
+                    .replace(/\\/g, "/");
 
                 const fileStat = await fs.stat(realPath);
 
