@@ -39,8 +39,10 @@ export class TscBasedCompiler {
     }: IAppSource): Promise<ICompilerResult> {
         const startTime = Date.now();
 
+        const posixClassFile = appInfo.classFile.replace(/\\/g, "/");
+
         // Entry‐file must exist
-        if (!appInfo.classFile || !sourceFiles[appInfo.classFile]) {
+        if (!posixClassFile || !sourceFiles[posixClassFile]) {
             throw new Error(
                 `Invalid App package. Could not find the classFile (${appInfo.classFile}).`,
             );
@@ -228,13 +230,13 @@ export class TscBasedCompiler {
         await collect(path.join(this.sourcePath, BUILD_DIR));
 
         // Point at the main JS file
-        const mainJs = appInfo.classFile.replace(/\.ts$/, ".js");
+        const mainJs = posixClassFile.replace(/\.ts$/, ".js");
         result.mainFile = result.files[mainJs];
 
         // Extract implemented interfaces from the TS AST
         const srcNode = TS.createSourceFile(
-            appInfo.classFile,
-            sourceFiles[appInfo.classFile].content,
+            posixClassFile,
+            sourceFiles[posixClassFile].content,
             TS.ScriptTarget.Latest,
             true,
         );
@@ -242,7 +244,7 @@ export class TscBasedCompiler {
 
         // Run inheritance checks
         this.appValidator.checkInheritance(
-            appInfo.classFile.replace(/\.ts$/, ""),
+            posixClassFile.replace(/\.ts$/, ""),
             result,
         );
 

@@ -114,6 +114,7 @@ export class AppsEngineValidator {
         filename: string,
         compilationResult: ICompilerResult,
     ): any {
+        filename = filename.replace(/\\/g, "/");
         const exports = {};
         const context = vm.createContext({
             require: (filepath: string) => {
