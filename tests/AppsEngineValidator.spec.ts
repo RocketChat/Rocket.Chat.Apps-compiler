@@ -3,6 +3,7 @@ import { describe, it, beforeEach, afterEach } from "mocha";
 import sinon from "sinon";
 
 import { AppsEngineValidator } from "../src/compiler/AppsEngineValidator";
+import logger from "../src/misc/logger";
 
 const OLD_PERMISSIONS_PATH =
     "@rocket.chat/apps-engine/server/permissions/AppPermissions";
@@ -42,7 +43,7 @@ describe("AppsEngineValidator", () => {
     let warnStub: sinon.SinonStub;
 
     beforeEach(() => {
-        warnStub = sinon.stub(console, "warn");
+        warnStub = sinon.stub(logger, "warn");
     });
 
     afterEach(() => {
@@ -71,7 +72,7 @@ describe("AppsEngineValidator", () => {
             ]);
             expect(warnStub.calledOnce).to.be.true;
             expect(warnStub.firstCall.args[0]).to.include(
-                "Failed to read available permissions",
+                "Couldn't find permissions in @rocket.chat/apps-engine version",
             );
         });
 

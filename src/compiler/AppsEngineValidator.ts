@@ -7,6 +7,7 @@ import type { IPermission } from "../definition/IPermission";
 import type { IAppPermissions } from "../misc/getAvailablePermissions";
 import { getAvailablePermissions } from "../misc/getAvailablePermissions";
 import { Utilities } from "../misc/Utilities";
+import logger from "../misc/logger";
 
 export class AppsEngineValidator {
     private readonly safeAppSourceRequire: (id: string) => any;
@@ -44,8 +45,8 @@ export class AppsEngineValidator {
             {};
 
         if (!AppPermissions) {
-            console.warn(
-                "Failed to read available permissions from the apps-engine. Permission definition will not be validated",
+            logger.warn(
+                "Couldn't find permissions in @rocket.chat/apps-engine version. App's permissions won't be validated",
             );
             return;
         }
