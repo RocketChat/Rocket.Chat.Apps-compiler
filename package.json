@@ -37,6 +37,7 @@
         "@types/lodash.clonedeep": "^4.5.3",
         "@types/mocha": "^8.0.0",
         "@types/node": "~22.14.1",
+        "@types/sinon": "^21.0.1",
         "@types/tv4": "^1.2.29",
         "@types/yauzl": "^2.10.3",
         "@types/yazl": "^2.4.1",
@@ -48,6 +49,7 @@
         "eslint-plugin-prettier": "^5.5.3",
         "husky": "^4.2.5",
         "mocha": "^8.0.1",
+        "sinon": "^22.0.0",
         "ts-node": "^9.1.1"
     },
     "dependencies": {
