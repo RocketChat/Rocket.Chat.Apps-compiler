@@ -1,13 +1,25 @@
 import * as vm from "vm";
 import path from "path";
 
+import type { AppInterface } from "@rocket.chat/apps-engine/definition/metadata";
 import type { ICompilerResult } from "../definition";
 import type { IPermission } from "../definition/IPermission";
+import type { IAppPermissions } from "../misc/getAvailablePermissions";
 import { getAvailablePermissions } from "../misc/getAvailablePermissions";
 import { Utilities } from "../misc/Utilities";
 
 export class AppsEngineValidator {
-    constructor(private readonly appSourceRequire: NodeRequire) {}
+    private readonly safeAppSourceRequire: (id: string) => any;
+
+    constructor(private readonly appSourceRequire: NodeJS.Require) {
+        this.safeAppSourceRequire = (id: string) => {
+            try {
+                return appSourceRequire(id);
+            } catch {
+                // It's ok not to find it
+            }
+        };
+    }
 
     public validateAppPermissionsSchema(permissions: Array<IPermission>): void {
         if (!permissions) {
@@ -20,17 +32,25 @@ export class AppsEngineValidator {
             );
         }
 
-        const permissionsRequire = this.appSourceRequire(
-            "@rocket.chat/apps-engine/server/permissions/AppPermissions",
-        );
+        const {
+            AppPermissions,
+        }: { AppPermissions: IAppPermissions | undefined } =
+            this.safeAppSourceRequire(
+                "@rocket.chat/apps-engine/server/permissions/AppPermissions",
+            ) ||
+            this.safeAppSourceRequire(
+                "@rocket.chat/apps-engine/definition/metadata/AppPermissions",
+            ) ||
+            {};
 
-        if (!permissionsRequire?.AppPermissions) {
+        if (!AppPermissions) {
+            console.warn(
+                "Failed to read available permissions from the apps-engine. Permission definition will not be validated",
+            );
             return;
         }
 
-        const availablePermissions = getAvailablePermissions(
-            permissionsRequire.AppPermissions,
-        );
+        const availablePermissions = getAvailablePermissions(AppPermissions);
 
         permissions.forEach((permission) => {
             if (permission && !availablePermissions.includes(permission.name)) {
@@ -42,17 +62,15 @@ export class AppsEngineValidator {
     }
 
     public isValidAppInterface(interfaceName: string): boolean {
-        let { AppInterface } = this.appSourceRequire(
-            "@rocket.chat/apps-engine/definition/metadata",
-        );
-
-        if (!AppInterface) {
-            AppInterface = this.appSourceRequire(
+        const { AppInterface }: { AppInterface: AppInterface | undefined } =
+            this.safeAppSourceRequire(
+                "@rocket.chat/apps-engine/definition/metadata",
+            ) ||
+            this.safeAppSourceRequire(
                 "@rocket.chat/apps-engine/server/compiler/AppImplements",
             );
-        }
 
-        return interfaceName in AppInterface;
+        return !!AppInterface[interfaceName as keyof AppInterface];
     }
 
     public resolveAppDependencyPath(module: string): string | undefined {
